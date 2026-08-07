@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-07T10:59:31.201Z",
+  "updatedAt": "2026-08-07T10:59:33.067Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -55,8 +55,8 @@
     },
     {
       "id": "customer-pickup",
-      "start": "2026-09-04",
-      "end": "2026-09-17"
+      "start": "2026-08-07",
+      "end": "2026-08-20"
     },
     {
       "id": "ownership",
@@ -80,7 +80,7 @@
     },
     {
       "id": "contract-management",
-      "start": "2026-09-01",
+      "start": "2026-08-31",
       "end": "2026-09-11"
     },
     {
