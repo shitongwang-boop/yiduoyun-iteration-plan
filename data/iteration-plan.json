@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-07T11:01:15.207Z",
+  "updatedAt": "2026-08-07T11:01:17.417Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -211,7 +211,7 @@
     {
       "id": "spot-report",
       "start": "2026-09-14",
-      "end": "2026-09-20"
+      "end": "2026-09-18"
     },
     {
       "id": "risk-report",
