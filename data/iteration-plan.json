@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-07T10:58:56.647Z",
+  "updatedAt": "2026-08-07T10:59:04.494Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -71,12 +71,12 @@
     {
       "id": "integrated-processing",
       "start": "2026-08-24",
-      "end": "2026-09-01"
+      "end": "2026-08-28"
     },
     {
       "id": "overdue-pickup",
-      "start": "2026-08-15",
-      "end": "2026-08-23"
+      "start": "2026-08-13",
+      "end": "2026-08-21"
     },
     {
       "id": "contract-management",
