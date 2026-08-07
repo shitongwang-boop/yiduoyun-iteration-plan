@@ -9,10 +9,10 @@ GitHub Pages 静态站点，使用腾讯云 CloudBase 数据库作为共享数�
 环境管理员需要在 CloudBase 控制台完成一次性配置：
 
 1. 进入环境 `yiduoyun-iteration-plan-d36f964e`，在“身份认证”中启用匿名登录。
-2. 在“云开发数据库”中新建集合 `iteration_plans`，创建一条 `_id` 为 `main` 的记录，并将 `data/iteration-plan.json` 中的 `items` 数组填入记录的 `items` 字段。
+2. 在“云开发数据库”中新建集合 `iteration_plans`。
 3. 为该集合设置公开读写规则。此设置意味着获得网址的任何人都可以修改规划。
 
-页面连接 CloudBase 后会自动使用匿名身份；变更会实时监听，并每 10 秒额外校验一次数据。
+页面连接 CloudBase 后会自动使用匿名身份，并在首次连接时写入当前的初始规划数据；变更会实时监听，并每 10 秒额外校验一次数据。
 
 ## 权限与并发
 

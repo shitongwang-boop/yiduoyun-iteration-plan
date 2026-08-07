@@ -147,7 +147,11 @@
     async readDocument() {
       const result = await this.document().get();
       const payload = Array.isArray(result?.data) ? result.data[0] : result?.data;
-      if (!payload) throw new Error('CloudBase 中尚未创建规划数据');
+      if (!payload) {
+        const error = new Error('CloudBase 中尚未创建规划数据');
+        error.code = 'NOT_FOUND';
+        throw error;
+      }
       return { items: parsePayload(payload), updatedAt: payload.updatedAt || null };
     }
 
@@ -165,6 +169,17 @@
         }
         this.updateIdleStatus();
       } catch (error) {
+        if (error.code === 'NOT_FOUND') {
+          try {
+            const seeded = await this.writeDocument(this.initialItems);
+            this.current = { items: seeded.items, updatedAt: seeded.updatedAt };
+            this.callbacks.onRemoteChange?.(seeded.items, { initial: true, updatedAt: seeded.updatedAt });
+            this.updateIdleStatus();
+            return;
+          } catch (seedError) {
+            console.warn('无法初始化 CloudBase 共享规划。', seedError);
+          }
+        }
         console.warn('无法读取 CloudBase 共享规划。', error);
         this.status('error', '共享数据读取失败，正在重试');
       }
