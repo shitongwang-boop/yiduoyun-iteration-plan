@@ -132,7 +132,7 @@ async function writeLatest(config, items, sha) {
   return payload;
 }
 
-exports.main = async (event) => {
+async function handleRequest(event) {
   const method = getMethod(event);
   if (method === 'OPTIONS') return response(204, {});
   if (method === 'GET') return response(200, { ok: true });
@@ -160,4 +160,22 @@ exports.main = async (event) => {
     console.error('GitHub planning gateway failed.', error);
     return response(500, { message: error.message || '保存共享规划失败' });
   }
+}
+
+// CloudBase HTTP functions pass Node's request and response objects. Returning
+// the same value when no response object is supplied keeps local testing simple.
+exports.main = async (request, responseObject) => {
+  const event = responseObject
+    ? {
+        httpMethod: request.method,
+        headers: request.headers,
+        body: request.body,
+        queryStringParameters: request.query
+      }
+    : request;
+  const result = await handleRequest(event || {});
+  if (!responseObject) return result;
+  responseObject.statusCode = result.statusCode;
+  Object.entries(result.headers).forEach(([name, value]) => responseObject.setHeader(name, value));
+  responseObject.end(result.body);
 };
