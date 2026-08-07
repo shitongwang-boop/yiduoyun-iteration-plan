@@ -15,6 +15,12 @@ GitHub Pages 静态站点，使用仓库中的 `data/iteration-plan.json` 作为
 
 GitHub 令牌只存在 CloudBase 环境变量中，不会发送给网站访问者。页面每 10 秒读取一次共享文件，保存时由网关创建 Git 提交。
 
+## 每日备份与恢复
+
+每日自动备份会将当日的 `data/iteration-plan.json` 保存为 `data/backups/iteration-plan-YYYY-MM-DD.json` 并提交到 GitHub。重复运行同一天的备份不会覆盖已有备份。
+
+需要恢复时，提出要恢复的备份日期。恢复会将指定备份写回共享数据文件并创建新的 Git 提交，之后所有访问者都会自动读取恢复后的版本。
+
 ## 权限与并发
 
 - 所有访问者均可调整顺序和日期。
