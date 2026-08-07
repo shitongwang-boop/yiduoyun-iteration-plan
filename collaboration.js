@@ -15,9 +15,8 @@
     const remote = compactItems(remoteItems);
     const baseById = Object.fromEntries(base.map((item) => [item.id, item]));
     const remoteById = Object.fromEntries(remote.map((item) => [item.id, { ...item }]));
-    const baseOrder = base.map((item) => item.id);
     const localOrder = local.map((item) => item.id);
-    const orderChanged = JSON.stringify(baseOrder) !== JSON.stringify(localOrder);
+    const orderChanged = JSON.stringify(base.map((item) => item.id)) !== JSON.stringify(localOrder);
 
     local.forEach((item) => {
       const previous = baseById[item.id];
@@ -43,25 +42,51 @@
   function isConfigured(config) {
     return Boolean(
       config &&
-      /^https:\/\/.+\.supabase\.co$/.test(String(config.supabaseUrl || '')) &&
-      String(config.supabaseAnonKey || '').length > 40
+      /^[A-Za-z0-9-]+$/.test(String(config.owner || '')) &&
+      /^[A-Za-z0-9._-]+$/.test(String(config.repo || '')) &&
+      /^[A-Za-z0-9._/-]+\.json$/.test(String(config.path || ''))
     );
+  }
+
+  function parsePayload(payload) {
+    const items = Array.isArray(payload?.items)
+      ? payload.items
+      : Array.isArray(payload?.iterationThemes)
+        ? payload.iterationThemes
+        : null;
+    if (!items) throw new Error('共享规划文件缺少 items 数组');
+    return compactItems(items);
+  }
+
+  function encodeBase64(value) {
+    const bytes = new TextEncoder().encode(value);
+    let binary = '';
+    for (let index = 0; index < bytes.length; index += 0x8000) {
+      binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+    }
+    return global.btoa(binary);
+  }
+
+  function decodeBase64(value) {
+    const binary = global.atob(String(value || '').replace(/\n/g, ''));
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
   }
 
   class IterationPlanCollaboration {
     constructor(config, callbacks = {}) {
-      this.config = { planId: 'main', ...config };
+      this.config = { branch: 'main', pollIntervalMs: 15000, ...config };
       this.callbacks = callbacks;
-      this.client = null;
-      this.channel = null;
-      this.session = null;
       this.current = null;
+      this.initialItems = [];
       this.pendingItems = null;
       this.queuedRemote = null;
       this.saving = false;
       this.started = false;
-      this.initialItems = [];
-      this.presenceId = global.crypto?.randomUUID?.() || `viewer-${Date.now()}-${Math.random()}`;
+      this.pollTimer = null;
+      this.githubUser = null;
+      this.tokenStorageKey = `yiduoyun-github-token:${this.config.owner}/${this.config.repo}`;
+      this.token = global.sessionStorage?.getItem(this.tokenStorageKey) || '';
       this.onlineHandler = () => this.flush();
       this.offlineHandler = () => this.status('offline', '当前离线，修改将在联网后同步');
     }
@@ -71,11 +96,11 @@
     }
 
     get canEdit() {
-      return !this.configured || Boolean(this.session?.user);
+      return this.configured && Boolean(this.token);
     }
 
     get user() {
-      return this.session?.user || null;
+      return this.githubUser ? { login: this.githubUser.login } : this.token ? { login: 'GitHub 已授权' } : null;
     }
 
     status(state, message) {
@@ -90,163 +115,167 @@
       });
     }
 
+    rawUrl() {
+      return `https://raw.githubusercontent.com/${this.config.owner}/${this.config.repo}/${this.config.branch}/${this.config.path}`;
+    }
+
+    apiUrl() {
+      return `https://api.github.com/repos/${this.config.owner}/${this.config.repo}/contents/${this.config.path}`;
+    }
+
+    headers(withToken = false) {
+      const headers = { Accept: 'application/vnd.github+json' };
+      if (withToken && this.token) headers.Authorization = `Bearer ${this.token}`;
+      return headers;
+    }
+
     async start(initialItems) {
       if (this.started) return;
       this.started = true;
       this.initialItems = compactItems(initialItems);
 
       if (!this.configured) {
-        this.status('local', '仅保存在当前浏览器');
-        this.authChanged();
-        return;
-      }
-      if (!global.supabase?.createClient) {
-        this.status('error', '实时同步组件加载失败');
+        this.status('error', 'GitHub 共享数据尚未配置');
         this.authChanged();
         return;
       }
 
-      this.status('connecting', '正在连接共享数据');
-      this.client = global.supabase.createClient(this.config.supabaseUrl, this.config.supabaseAnonKey, {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true
-        }
-      });
-
-      const { data: authData, error: authError } = await this.client.auth.getSession();
-      if (authError) console.warn('无法读取协作登录状态。', authError);
-      this.session = authData?.session || null;
       this.authChanged();
-
-      this.client.auth.onAuthStateChange((_event, session) => {
-        this.session = session;
-        this.authChanged();
-        if (this.channel) this.trackPresence();
-        if (session?.user && this.pendingItems) this.flush();
-        this.updateIdleStatus();
-      });
-
-      await this.loadRemote();
-      this.subscribe();
+      if (this.token) {
+        try {
+          await this.loadGitHubUser();
+        } catch (error) {
+          console.warn('GitHub 编辑授权已失效。', error);
+          this.signOut();
+          this.status('readonly', 'GitHub 授权已失效，请重新授权');
+        }
+      }
+      await this.loadRemote(true);
+      this.pollTimer = global.setInterval(() => this.loadRemote(false), this.config.pollIntervalMs);
       global.addEventListener?.('online', this.onlineHandler);
       global.addEventListener?.('offline', this.offlineHandler);
     }
 
-    async loadRemote() {
-      const { data, error } = await this.client
-        .from('iteration_plans')
-        .select('id,items,revision,updated_at,updated_by')
-        .eq('id', this.config.planId)
-        .maybeSingle();
-
-      if (error) {
-        this.status('error', '共享数据读取失败');
-        console.warn('无法读取共享规划。', error);
-        return;
-      }
-
-      if (data) {
-        this.current = data;
-        const remoteItems = Array.isArray(data.items) && data.items.length ? data.items : this.initialItems;
-        this.callbacks.onRemoteChange?.(compactItems(remoteItems), { initial: true, revision: data.revision });
-      }
-      this.updateIdleStatus();
+    async fetchRaw() {
+      const response = await global.fetch(`${this.rawUrl()}?t=${Date.now()}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`共享规划读取失败 (${response.status})`);
+      return response.json();
     }
 
-    subscribe() {
-      this.channel = this.client
-        .channel(`iteration-plan-${this.config.planId}`, {
-          config: { presence: { key: this.presenceId } }
-        })
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'iteration_plans', filter: `id=eq.${this.config.planId}` },
-          (payload) => this.receiveRemote(payload.new)
-        )
-        .on('presence', { event: 'sync' }, () => {
-          const state = this.channel.presenceState();
-          const count = Object.values(state).reduce((total, entries) => total + entries.length, 0);
-          this.callbacks.onPresenceChange?.(count);
-        })
-        .subscribe((state) => {
-          if (state === 'SUBSCRIBED') {
-            this.trackPresence();
-            this.updateIdleStatus();
-          } else if (state === 'CHANNEL_ERROR' || state === 'TIMED_OUT') {
-            this.status('offline', '实时连接中断，等待重连');
+    async loadRemote(initial) {
+      if (!this.configured || !global.navigator?.onLine) return;
+      try {
+        const payload = await this.fetchRaw();
+        const items = parsePayload(payload);
+        if (!this.current || !sameItems(this.current.items, items)) {
+          const remote = { items, updatedAt: payload.updatedAt || null };
+          if (this.saving || this.pendingItems) {
+            this.queuedRemote = remote;
+          } else {
+            this.current = remote;
+            this.callbacks.onRemoteChange?.(items, { initial, updatedAt: payload.updatedAt || null });
           }
-        });
-    }
-
-    async trackPresence() {
-      if (!this.channel) return;
-      await this.channel.track({
-        viewerId: this.presenceId,
-        userId: this.user?.id || null,
-        joinedAt: new Date().toISOString()
-      });
-    }
-
-    receiveRemote(row) {
-      if (!row || Number(row.revision) <= Number(this.current?.revision || 0)) return;
-      if (this.saving || this.pendingItems) {
-        this.queuedRemote = row;
-        return;
+        }
+        this.updateIdleStatus();
+      } catch (error) {
+        console.warn('无法读取 GitHub 共享规划。', error);
+        this.status('error', '共享数据读取失败，正在重试');
       }
-      this.current = row;
-      this.callbacks.onRemoteChange?.(compactItems(row.items), { initial: false, revision: row.revision });
-      this.updateIdleStatus();
     }
 
     updateIdleStatus() {
-      if (!this.configured) {
-        this.status('local', '仅保存在当前浏览器');
-      } else if (!global.navigator?.onLine) {
+      if (!global.navigator?.onLine) {
         this.status('offline', '当前离线，修改将在联网后同步');
-      } else if (!this.user) {
-        this.status('readonly', '共享数据已同步 · 登录后可编辑');
+      } else if (!this.token) {
+        this.status('readonly', '共享数据已同步 · GitHub 授权后可编辑');
       } else {
         this.status('synced', '共享数据已同步');
       }
     }
 
-    async signIn(email) {
-      if (!this.configured) throw new Error('实时同步尚未配置');
-      const redirectTo = `${global.location.origin}${global.location.pathname}`;
-      const { error } = await this.client.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: redirectTo, shouldCreateUser: true }
-      });
-      if (error) throw error;
+    async loadGitHubUser() {
+      const response = await global.fetch('https://api.github.com/user', { headers: this.headers(true) });
+      if (!response.ok) throw new Error('GitHub 令牌无效或已过期');
+      this.githubUser = await response.json();
+      this.authChanged();
     }
 
-    async signOut() {
-      if (!this.client) return;
-      const { error } = await this.client.auth.signOut();
-      if (error) throw error;
+    async signIn(token) {
+      if (!this.configured) throw new Error('GitHub 共享数据尚未配置');
+      if (!token) throw new Error('请输入 GitHub 细粒度令牌');
+      const previousToken = this.token;
+      this.token = token;
+      try {
+        await this.loadGitHubUser();
+        await this.getRepositoryContent();
+        global.sessionStorage?.setItem(this.tokenStorageKey, token);
+        this.authChanged();
+        this.updateIdleStatus();
+      } catch (error) {
+        this.token = previousToken;
+        throw error;
+      }
+    }
+
+    signOut() {
+      global.sessionStorage?.removeItem(this.tokenStorageKey);
+      this.token = '';
+      this.githubUser = null;
+      this.authChanged();
+      this.updateIdleStatus();
     }
 
     save(items) {
-      const next = compactItems(items);
-      if (!this.configured) {
-        this.status('local', '仅保存在当前浏览器');
-        return Promise.resolve({ localOnly: true });
-      }
-      if (!this.user) {
-        const error = new Error('请先登录再编辑共享规划');
+      if (!this.canEdit) {
+        const error = new Error('请先完成 GitHub 编辑授权');
         error.code = 'AUTH_REQUIRED';
         return Promise.reject(error);
       }
-      this.pendingItems = next;
+      this.pendingItems = compactItems(items);
       return this.flush();
     }
 
+    async getRepositoryContent() {
+      const response = await global.fetch(`${this.apiUrl()}?ref=${encodeURIComponent(this.config.branch)}`, {
+        headers: this.headers(true)
+      });
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) throw new Error('GitHub 令牌没有该仓库的 Contents 读写权限');
+        throw new Error(`无法读取 GitHub 文件 (${response.status})`);
+      }
+      const content = await response.json();
+      return { sha: content.sha, payload: JSON.parse(decodeBase64(content.content)) };
+    }
+
+    async putRepositoryContent(items, sha) {
+      const payload = {
+        schemaVersion: 1,
+        updatedAt: new Date().toISOString(),
+        updatedBy: this.githubUser?.login || 'github-editor',
+        items: compactItems(items)
+      };
+      const response = await global.fetch(this.apiUrl(), {
+        method: 'PUT',
+        headers: { ...this.headers(true), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `Update iteration plan (${payload.updatedAt})`,
+          content: encodeBase64(`${JSON.stringify(payload, null, 2)}\n`),
+          branch: this.config.branch,
+          sha
+        })
+      });
+      if (response.status === 409) return null;
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) throw new Error('GitHub 令牌没有该仓库的 Contents 写入权限');
+        throw new Error(`GitHub 保存失败 (${response.status})`);
+      }
+      return payload;
+    }
+
     async flush() {
-      if (this.saving || !this.pendingItems || !this.user || !global.navigator?.onLine) return;
+      if (this.saving || !this.pendingItems || !this.canEdit || !global.navigator?.onLine) return;
       this.saving = true;
-      this.status('saving', '正在保存到云端');
+      this.status('saving', '正在提交共享规划');
       let unsavedItems = null;
 
       try {
@@ -255,53 +284,35 @@
           unsavedItems = localItems;
           this.pendingItems = null;
           const saved = await this.saveWithRetry(localItems);
-          if (!saved) throw new Error('共享规划存在连续冲突，请稍后重试');
-          this.current = saved;
+          if (!saved) throw new Error('多人同时修改过于频繁，请稍后重试');
+          this.current = { items: saved.items, updatedAt: saved.updatedAt };
           unsavedItems = null;
           if (!sameItems(saved.items, localItems)) {
-            this.callbacks.onRemoteChange?.(compactItems(saved.items), { initial: false, merged: true, revision: saved.revision });
+            this.callbacks.onRemoteChange?.(saved.items, { initial: false, merged: true, updatedAt: saved.updatedAt });
           }
         }
-        if (this.queuedRemote && Number(this.queuedRemote.revision) > Number(this.current?.revision || 0)) {
+        if (this.queuedRemote && Date.parse(this.queuedRemote.updatedAt || '') > Date.parse(this.current.updatedAt || '')) {
           this.current = this.queuedRemote;
-          this.callbacks.onRemoteChange?.(compactItems(this.queuedRemote.items), {
-            initial: false,
-            revision: this.queuedRemote.revision
-          });
+          this.callbacks.onRemoteChange?.(this.queuedRemote.items, { initial: false, updatedAt: this.queuedRemote.updatedAt });
         }
         this.queuedRemote = null;
         this.updateIdleStatus();
       } catch (error) {
         if (unsavedItems && !this.pendingItems) this.pendingItems = unsavedItems;
-        console.warn('共享规划保存失败。', error);
-        this.status(global.navigator?.onLine ? 'error' : 'offline', global.navigator?.onLine ? '云端保存失败，本地副本已保留' : '当前离线，修改将在联网后同步');
+        console.warn('GitHub 共享规划保存失败。', error);
+        this.status(global.navigator?.onLine ? 'error' : 'offline', global.navigator?.onLine ? '提交失败，本地副本已保留' : '当前离线，修改将在联网后同步');
       } finally {
         this.saving = false;
       }
     }
 
     async saveWithRetry(localItems) {
-      let base = this.current || { items: this.initialItems, revision: 0 };
-      let nextItems = localItems;
-
+      const baseItems = compactItems(this.current?.items || this.initialItems);
       for (let attempt = 0; attempt < 3; attempt += 1) {
-        const { data, error } = await this.client.rpc('save_iteration_plan', {
-          p_plan_id: this.config.planId,
-          p_items: nextItems,
-          p_expected_revision: Number(base.revision || 0)
-        });
-        if (error) throw error;
-        const saved = Array.isArray(data) ? data[0] : data;
+        const latest = await this.getRepositoryContent();
+        const nextItems = mergeConcurrentItems(baseItems, localItems, parsePayload(latest.payload));
+        const saved = await this.putRepositoryContent(nextItems, latest.sha);
         if (saved) return saved;
-
-        const { data: latest, error: readError } = await this.client
-          .from('iteration_plans')
-          .select('id,items,revision,updated_at,updated_by')
-          .eq('id', this.config.planId)
-          .single();
-        if (readError) throw readError;
-        nextItems = mergeConcurrentItems(base.items, nextItems, latest.items);
-        base = latest;
       }
       return null;
     }
@@ -310,6 +321,6 @@
   global.IterationPlanCollaboration = IterationPlanCollaboration;
   global.mergeConcurrentIterationItems = mergeConcurrentItems;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { IterationPlanCollaboration, compactItems, mergeConcurrentItems, isConfigured };
+    module.exports = { IterationPlanCollaboration, compactItems, mergeConcurrentItems, parsePayload, isConfigured };
   }
 })(typeof window !== 'undefined' ? window : globalThis);

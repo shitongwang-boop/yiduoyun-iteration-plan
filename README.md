@@ -1,21 +1,19 @@
 # 一朵云项目迭代规划
 
-GitHub Pages 静态站点，使用 Supabase 保存共享规划并通过 Realtime 推送最新状态。
+GitHub Pages 静态站点，使用仓库中的 `data/iteration-plan.json` 作为唯一共享数据源。
 
 ## 启用多人协作
 
-1. 新建一个 Supabase 项目，在 SQL Editor 中执行 `supabase/migrations/001_iteration_plan_realtime.sql`。
-2. 在 Supabase 的 Authentication 设置中配置 Site URL：
-   `https://shitongwang-boop.github.io/yiduoyun-iteration-plan/`。
-3. 将同一地址加入 Redirect URLs。关闭 Allow new users to sign up，并从 Users 页面邀请允许编辑的成员；如确实允许任意邮箱参与，再保留公开注册。
-4. 在 Project Settings > API 中复制 Project URL 和 `anon` public key，填入 `collaboration-config.js`。
-5. 提交并推送到 `main`，等待 GitHub Pages 发布。
+1. 将允许编辑的成员添加为 `shitongwang-boop/yiduoyun-iteration-plan` 仓库的协作者，并授予 Write 权限。
+2. 每位编辑者在 GitHub 的 Settings > Developer settings > Personal access tokens > Fine-grained tokens 新建令牌。
+3. 令牌只选择该仓库，并授予 Repository permissions 中的 Contents: Read and write；不需要其他权限。
+4. 在网站右上角点击“GitHub 授权”，粘贴令牌后即可编辑。
 
-未填写云端参数时，页面会继续使用浏览器本地存储，并明确显示“仅保存在当前浏览器”。
+令牌只保存在当前浏览器会话，关闭浏览器标签页后需要再次授权。页面每 15 秒读取一次共享文件，保存时通过 GitHub Contents API 创建提交。
 
 ## 权限与并发
 
-- 未登录用户可查看共享规划和接收实时更新。
-- 登录用户可调整顺序和日期。
-- 每次保存使用数据库版本号进行乐观锁校验；发生并发更新时，不同字段会自动合并后重试。
-- 数据库拒绝越界日期、重复主题 ID 和匿名写入。
+- 未授权用户可查看共享规划，授权用户可调整顺序和日期。
+- GitHub 会记录每次修改的提交人、时间和完整文件历史。
+- 保存前会读取最新版文件；发生并发更新时，不同主题或日期的调整会自动合并并重试。
+- 需要即时通知时刷新页面即可；常规同步间隔为 15 秒。

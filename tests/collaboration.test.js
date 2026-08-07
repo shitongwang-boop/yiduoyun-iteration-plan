@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const { compactItems, isConfigured, mergeConcurrentItems } = require('../collaboration.js');
+const { compactItems, isConfigured, mergeConcurrentItems, parsePayload } = require('../collaboration.js');
 
 const base = [
   { id: 'a', start: '2026-08-07', end: '2026-08-10' },
@@ -36,10 +36,17 @@ test('a cross-field date conflict keeps the latest valid local range', () => {
   assert.deepEqual(mergeConcurrentItems(base, local, remote), local);
 });
 
-test('configuration rejects placeholders and accepts a Supabase project', () => {
-  assert.equal(isConfigured({ supabaseUrl: '', supabaseAnonKey: '' }), false);
+test('configuration accepts a GitHub repository data file', () => {
+  assert.equal(isConfigured({ owner: '', repo: '', path: '' }), false);
   assert.equal(isConfigured({
-    supabaseUrl: 'https://example.supabase.co',
-    supabaseAnonKey: 'x'.repeat(41)
+    owner: 'shitongwang-boop',
+    repo: 'yiduoyun-iteration-plan',
+    path: 'data/iteration-plan.json'
   }), true);
+});
+
+test('shared data accepts the GitHub file schema', () => {
+  assert.deepEqual(parsePayload({ items: base }), base);
+  assert.deepEqual(parsePayload({ iterationThemes: base }), base);
+  assert.throws(() => parsePayload({}), /items/);
 });

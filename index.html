@@ -631,7 +631,7 @@
     </div>
     <div class="toolbar">
       <div class="save-state" id="saveState" data-state="connecting" aria-live="polite"><span class="save-state-icon" id="saveStateIcon"><i data-lucide="cloud"></i></span><span>正在检查共享数据</span></div>
-      <button class="btn" id="collaborationBtn" type="button" title="协作登录" hidden><i data-lucide="user-round"></i><span class="btn-text" id="collaborationLabel">协作登录</span></button>
+      <button class="btn" id="collaborationBtn" type="button" title="GitHub 编辑授权" hidden><i data-lucide="github"></i><span class="btn-text" id="collaborationLabel">GitHub 授权</span></button>
       <button class="icon-btn" id="undoBtn" type="button" aria-label="撤销" title="撤销" disabled><i data-lucide="undo-2"></i><span class="icon-fallback">↶</span></button>
       <button class="icon-btn" id="redoBtn" type="button" aria-label="重做" title="重做" disabled><i data-lucide="redo-2"></i><span class="icon-fallback">↷</span></button>
       <button class="btn" id="exportBtn" type="button" title="导出当前规划 JSON"><i data-lucide="download"></i><span class="icon-fallback">↓</span><span class="btn-text">导出规划</span></button>
@@ -694,26 +694,25 @@
     <form class="login-form" id="loginForm">
       <div class="dialog-head">
         <div>
-          <h2 class="dialog-title" id="loginTitle">协作登录</h2>
-          <p class="dialog-subtitle">使用工作邮箱接收登录链接</p>
+          <h2 class="dialog-title" id="loginTitle">GitHub 编辑授权</h2>
+          <p class="dialog-subtitle">令牌仅保存在当前浏览器会话中</p>
         </div>
         <button class="icon-btn" id="closeLoginBtn" type="button" aria-label="关闭" title="关闭"><i data-lucide="x"></i></button>
       </div>
-      <label class="dialog-field" for="loginEmail">邮箱
-        <input class="dialog-input" id="loginEmail" name="email" type="email" autocomplete="email" required placeholder="name@company.com">
+      <label class="dialog-field" for="githubToken">GitHub 细粒度令牌
+        <input class="dialog-input" id="githubToken" name="token" type="password" autocomplete="off" spellcheck="false" required placeholder="github_pat_...">
       </label>
       <p class="dialog-message" id="loginMessage" aria-live="polite"></p>
       <div class="dialog-actions">
         <button class="btn" id="cancelLoginBtn" type="button">取消</button>
-        <button class="btn primary" id="sendLoginBtn" type="submit"><i data-lucide="send"></i><span>发送登录链接</span></button>
+        <button class="btn primary" id="sendLoginBtn" type="submit"><i data-lucide="key-round"></i><span>保存授权</span></button>
       </div>
     </form>
   </dialog>
 
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8/dist/umd/supabase.min.js"></script>
-  <script src="collaboration-config.js?v=20260807-1"></script>
-  <script src="collaboration.js?v=20260807"></script>
+  <script src="collaboration-config.js?v=20260807-github"></script>
+  <script src="collaboration.js?v=20260807-github"></script>
   <script>
     (() => {
       const DAY = 24 * 60 * 60 * 1000;
@@ -784,7 +783,6 @@
       let activeAdjustment = null;
       let history = [snapshot()];
       let historyIndex = 0;
-      let presenceCount = 0;
       let latestSyncStatus = { state: 'connecting', message: '正在检查共享数据' };
 
       const ganttRows = document.getElementById('ganttRows');
@@ -799,14 +797,10 @@
       const loginForm = document.getElementById('loginForm');
       const loginMessage = document.getElementById('loginMessage');
       const sendLoginBtn = document.getElementById('sendLoginBtn');
-      const collaboration = new window.IterationPlanCollaboration(window.YIDUOYUN_SYNC_CONFIG, {
+      const collaboration = new window.IterationPlanCollaboration(window.YIDUOYUN_GITHUB_SYNC_CONFIG, {
         onRemoteChange: applyRemoteItems,
         onStatus: updateSyncStatus,
-        onAuthChange: updateAuthState,
-        onPresenceChange: (count) => {
-          presenceCount = count;
-          renderSyncStatus();
-        }
+        onAuthChange: updateAuthState
       });
       let editingEnabled = !collaboration.configured;
 
@@ -982,21 +976,18 @@
           offline: 'cloud-off',
           error: 'triangle-alert'
         };
-        const onlineSuffix = collaboration.configured && presenceCount > 0 && ['synced', 'readonly'].includes(latestSyncStatus.state)
-          ? ` · ${presenceCount} 人在线`
-          : '';
         saveState.dataset.state = latestSyncStatus.state;
         document.getElementById('saveStateIcon').innerHTML = `<i data-lucide="${iconByState[latestSyncStatus.state] || 'cloud'}"></i>`;
-        saveState.querySelector(':scope > span:last-child').textContent = `${latestSyncStatus.message}${onlineSuffix}`;
+        saveState.querySelector(':scope > span:last-child').textContent = latestSyncStatus.message;
         refreshIcons();
       }
 
       function updateAuthState({ configured, canEdit, user }) {
         editingEnabled = canEdit;
         collaborationBtn.hidden = !configured;
-        collaborationLabel.textContent = user?.email || '协作登录';
-        collaborationBtn.title = user ? `${user.email || '协作账号'} · 点击退出` : '协作登录';
-        collaborationBtn.querySelector('svg')?.setAttribute('data-lucide', user ? 'circle-user-round' : 'user-round');
+        collaborationLabel.textContent = user?.login || 'GitHub 授权';
+        collaborationBtn.title = user ? `${user.login || 'GitHub'} · 点击移除授权` : 'GitHub 编辑授权';
+        collaborationBtn.querySelector('svg')?.setAttribute('data-lucide', 'github');
         document.body.classList.toggle('collaboration-readonly', configured && !canEdit);
         renderRows();
         updateHistoryButtons();
@@ -1432,7 +1423,7 @@
         loginMessage.textContent = '';
         loginMessage.classList.remove('error');
         if (!loginDialog.open) loginDialog.showModal();
-        window.setTimeout(() => document.getElementById('loginEmail').focus(), 0);
+        window.setTimeout(() => document.getElementById('githubToken').focus(), 0);
       }
 
       function closeLoginDialog() {
@@ -1444,13 +1435,13 @@
           openLoginDialog();
           return;
         }
-        if (!window.confirm(`确认退出 ${collaboration.user.email || '当前协作账号'}？`)) return;
+        if (!window.confirm(`确认移除此浏览器中 ${collaboration.user.login || 'GitHub'} 的编辑授权？`)) return;
         try {
-          await collaboration.signOut();
-          showToast('已退出协作账号');
+          collaboration.signOut();
+          showToast('已移除 GitHub 编辑授权');
         } catch (error) {
-          showToast('退出失败，请稍后重试', 'warn');
-          console.warn('协作账号退出失败。', error);
+          showToast('移除授权失败，请稍后重试', 'warn');
+          console.warn('GitHub 编辑授权移除失败。', error);
         }
       });
 
@@ -1462,14 +1453,14 @@
 
       loginForm.addEventListener('submit', async (event) => {
         event.preventDefault();
-        const email = document.getElementById('loginEmail').value.trim();
-        if (!email) return;
+        const token = document.getElementById('githubToken').value.trim();
+        if (!token) return;
         sendLoginBtn.disabled = true;
-        loginMessage.textContent = '正在发送...';
+        loginMessage.textContent = '正在验证...';
         loginMessage.classList.remove('error');
         try {
-          await collaboration.signIn(email);
-          loginMessage.textContent = '登录链接已发送，请到邮箱中查收';
+          await collaboration.signIn(token);
+          loginMessage.textContent = `已授权为 ${collaboration.user?.login || 'GitHub 用户'}`;
         } catch (error) {
           loginMessage.textContent = error.message || '发送失败，请稍后重试';
           loginMessage.classList.add('error');
