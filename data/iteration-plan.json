@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-07T10:59:04.494Z",
+  "updatedAt": "2026-08-07T10:59:31.201Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -75,18 +75,18 @@
     },
     {
       "id": "overdue-pickup",
-      "start": "2026-08-13",
+      "start": "2026-08-17",
       "end": "2026-08-21"
     },
     {
       "id": "contract-management",
-      "start": "2026-08-30",
+      "start": "2026-09-01",
       "end": "2026-09-11"
     },
     {
       "id": "contract-template",
-      "start": "2026-08-30",
-      "end": "2026-09-11"
+      "start": "2026-09-21",
+      "end": "2026-09-25"
     },
     {
       "id": "after-sales",
