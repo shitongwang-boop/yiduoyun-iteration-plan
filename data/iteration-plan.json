@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-07T11:00:54.439Z",
+  "updatedAt": "2026-08-07T11:00:57.259Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -200,7 +200,7 @@
     },
     {
       "id": "finance-report",
-      "start": "2026-09-12",
+      "start": "2026-09-14",
       "end": "2026-09-20"
     },
     {
