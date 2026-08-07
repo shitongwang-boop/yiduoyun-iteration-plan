@@ -690,8 +690,8 @@
   <div class="toast-wrap" id="toastWrap" aria-live="polite"></div>
 
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-  <script src="collaboration-config.js?v=20260807-cloudbase-open"></script>
-  <script src="collaboration.js?v=20260807-cloudbase-open"></script>
+  <script src="collaboration-config.js?v=20260807-github-gateway"></script>
+  <script src="collaboration.js?v=20260807-github-gateway"></script>
   <script>
     (() => {
       const DAY = 24 * 60 * 60 * 1000;
@@ -770,7 +770,7 @@
       const undoBtn = document.getElementById('undoBtn');
       const redoBtn = document.getElementById('redoBtn');
       const resetBtn = document.getElementById('resetBtn');
-      const collaboration = new window.IterationPlanCollaboration(window.YIDUOYUN_CLOUDBASE_SYNC_CONFIG, {
+      const collaboration = new window.IterationPlanCollaboration(window.YIDUOYUN_GITHUB_SYNC_CONFIG, {
         onRemoteChange: applyRemoteItems,
         onStatus: updateSyncStatus,
         onAuthChange: updateAuthState
