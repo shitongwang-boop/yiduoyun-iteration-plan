@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-07T11:01:17.417Z",
+  "updatedAt": "2026-08-07T11:24:02.892Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -90,8 +90,8 @@
     },
     {
       "id": "after-sales",
-      "start": "2026-08-07",
-      "end": "2026-08-28"
+      "start": "2026-08-19",
+      "end": "2026-09-09"
     },
     {
       "id": "merchant-department",
