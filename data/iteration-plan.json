@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-07T10:59:33.067Z",
+  "updatedAt": "2026-08-07T11:00:11.489Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -101,7 +101,7 @@
     {
       "id": "invoice-flow",
       "start": "2026-08-17",
-      "end": "2026-09-11"
+      "end": "2026-08-27"
     },
     {
       "id": "b2-settlement",
