@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-07T10:58:44.168Z",
+  "updatedAt": "2026-08-07T10:58:56.647Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -65,13 +65,13 @@
     },
     {
       "id": "integrated-logistics",
-      "start": "2026-08-27",
+      "start": "2026-08-31",
       "end": "2026-09-04"
     },
     {
       "id": "integrated-processing",
-      "start": "2026-09-12",
-      "end": "2026-09-20"
+      "start": "2026-08-24",
+      "end": "2026-09-01"
     },
     {
       "id": "overdue-pickup",
