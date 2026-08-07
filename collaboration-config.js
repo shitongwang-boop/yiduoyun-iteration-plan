@@ -1,7 +1,6 @@
-window.YIDUOYUN_GITHUB_SYNC_CONFIG = {
-  owner: 'shitongwang-boop',
-  repo: 'yiduoyun-iteration-plan',
-  branch: 'main',
-  path: 'data/iteration-plan.json',
-  pollIntervalMs: 15000
+window.YIDUOYUN_CLOUDBASE_SYNC_CONFIG = {
+  env: 'yiduoyun-iteration-plan-d36f964e',
+  collection: 'iteration_plans',
+  docId: 'main',
+  pollIntervalMs: 10000
 };

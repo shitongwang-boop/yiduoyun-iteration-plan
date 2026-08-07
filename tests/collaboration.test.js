@@ -36,16 +36,16 @@ test('a cross-field date conflict keeps the latest valid local range', () => {
   assert.deepEqual(mergeConcurrentItems(base, local, remote), local);
 });
 
-test('configuration accepts a GitHub repository data file', () => {
-  assert.equal(isConfigured({ owner: '', repo: '', path: '' }), false);
+test('configuration accepts a CloudBase shared document', () => {
+  assert.equal(isConfigured({ env: '', collection: '', docId: '' }), false);
   assert.equal(isConfigured({
-    owner: 'shitongwang-boop',
-    repo: 'yiduoyun-iteration-plan',
-    path: 'data/iteration-plan.json'
+    env: 'yiduoyun-iteration-plan-d36f964e',
+    collection: 'iteration_plans',
+    docId: 'main'
   }), true);
 });
 
-test('shared data accepts the GitHub file schema', () => {
+test('shared data accepts the CloudBase document schema', () => {
   assert.deepEqual(parsePayload({ items: base }), base);
   assert.deepEqual(parsePayload({ iterationThemes: base }), base);
   assert.throws(() => parsePayload({}), /items/);

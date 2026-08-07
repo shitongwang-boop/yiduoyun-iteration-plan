@@ -631,7 +631,6 @@
     </div>
     <div class="toolbar">
       <div class="save-state" id="saveState" data-state="connecting" aria-live="polite"><span class="save-state-icon" id="saveStateIcon"><i data-lucide="cloud"></i></span><span>正在检查共享数据</span></div>
-      <button class="btn" id="collaborationBtn" type="button" title="GitHub 编辑授权" hidden><i data-lucide="github"></i><span class="btn-text" id="collaborationLabel">GitHub 授权</span></button>
       <button class="icon-btn" id="undoBtn" type="button" aria-label="撤销" title="撤销" disabled><i data-lucide="undo-2"></i><span class="icon-fallback">↶</span></button>
       <button class="icon-btn" id="redoBtn" type="button" aria-label="重做" title="重做" disabled><i data-lucide="redo-2"></i><span class="icon-fallback">↷</span></button>
       <button class="btn" id="exportBtn" type="button" title="导出当前规划 JSON"><i data-lucide="download"></i><span class="icon-fallback">↓</span><span class="btn-text">导出规划</span></button>
@@ -690,29 +689,9 @@
 
   <div class="toast-wrap" id="toastWrap" aria-live="polite"></div>
 
-  <dialog class="collaboration-dialog" id="loginDialog" aria-labelledby="loginTitle">
-    <form class="login-form" id="loginForm">
-      <div class="dialog-head">
-        <div>
-          <h2 class="dialog-title" id="loginTitle">GitHub 编辑授权</h2>
-          <p class="dialog-subtitle">令牌仅保存在当前浏览器会话中</p>
-        </div>
-        <button class="icon-btn" id="closeLoginBtn" type="button" aria-label="关闭" title="关闭"><i data-lucide="x"></i></button>
-      </div>
-      <label class="dialog-field" for="githubToken">GitHub 细粒度令牌
-        <input class="dialog-input" id="githubToken" name="token" type="password" autocomplete="off" spellcheck="false" required placeholder="github_pat_...">
-      </label>
-      <p class="dialog-message" id="loginMessage" aria-live="polite"></p>
-      <div class="dialog-actions">
-        <button class="btn" id="cancelLoginBtn" type="button">取消</button>
-        <button class="btn primary" id="sendLoginBtn" type="submit"><i data-lucide="key-round"></i><span>保存授权</span></button>
-      </div>
-    </form>
-  </dialog>
-
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-  <script src="collaboration-config.js?v=20260807-github"></script>
-  <script src="collaboration.js?v=20260807-github"></script>
+  <script src="collaboration-config.js?v=20260807-cloudbase-open"></script>
+  <script src="collaboration.js?v=20260807-cloudbase-open"></script>
   <script>
     (() => {
       const DAY = 24 * 60 * 60 * 1000;
@@ -791,13 +770,7 @@
       const undoBtn = document.getElementById('undoBtn');
       const redoBtn = document.getElementById('redoBtn');
       const resetBtn = document.getElementById('resetBtn');
-      const collaborationBtn = document.getElementById('collaborationBtn');
-      const collaborationLabel = document.getElementById('collaborationLabel');
-      const loginDialog = document.getElementById('loginDialog');
-      const loginForm = document.getElementById('loginForm');
-      const loginMessage = document.getElementById('loginMessage');
-      const sendLoginBtn = document.getElementById('sendLoginBtn');
-      const collaboration = new window.IterationPlanCollaboration(window.YIDUOYUN_GITHUB_SYNC_CONFIG, {
+      const collaboration = new window.IterationPlanCollaboration(window.YIDUOYUN_CLOUDBASE_SYNC_CONFIG, {
         onRemoteChange: applyRemoteItems,
         onStatus: updateSyncStatus,
         onAuthChange: updateAuthState
@@ -933,10 +906,6 @@
       function saveItems() {
         cacheItems();
         collaboration.save(JSON.parse(snapshot())).catch((error) => {
-          if (error.code === 'AUTH_REQUIRED') {
-            openLoginDialog();
-            return;
-          }
           console.warn('无法提交共享规划。', error);
         });
       }
@@ -984,10 +953,6 @@
 
       function updateAuthState({ configured, canEdit, user }) {
         editingEnabled = canEdit;
-        collaborationBtn.hidden = !configured;
-        collaborationLabel.textContent = user?.login || 'GitHub 授权';
-        collaborationBtn.title = user ? `${user.login || 'GitHub'} · 点击移除授权` : 'GitHub 编辑授权';
-        collaborationBtn.querySelector('svg')?.setAttribute('data-lucide', 'github');
         document.body.classList.toggle('collaboration-readonly', configured && !canEdit);
         renderRows();
         updateHistoryButtons();
@@ -1417,56 +1382,6 @@
         link.remove();
         URL.revokeObjectURL(url);
         showToast('规划文件已导出');
-      });
-
-      function openLoginDialog() {
-        loginMessage.textContent = '';
-        loginMessage.classList.remove('error');
-        if (!loginDialog.open) loginDialog.showModal();
-        window.setTimeout(() => document.getElementById('githubToken').focus(), 0);
-      }
-
-      function closeLoginDialog() {
-        if (loginDialog.open) loginDialog.close();
-      }
-
-      collaborationBtn.addEventListener('click', async () => {
-        if (!collaboration.user) {
-          openLoginDialog();
-          return;
-        }
-        if (!window.confirm(`确认移除此浏览器中 ${collaboration.user.login || 'GitHub'} 的编辑授权？`)) return;
-        try {
-          collaboration.signOut();
-          showToast('已移除 GitHub 编辑授权');
-        } catch (error) {
-          showToast('移除授权失败，请稍后重试', 'warn');
-          console.warn('GitHub 编辑授权移除失败。', error);
-        }
-      });
-
-      document.getElementById('closeLoginBtn').addEventListener('click', closeLoginDialog);
-      document.getElementById('cancelLoginBtn').addEventListener('click', closeLoginDialog);
-      loginDialog.addEventListener('click', (event) => {
-        if (event.target === loginDialog) closeLoginDialog();
-      });
-
-      loginForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const token = document.getElementById('githubToken').value.trim();
-        if (!token) return;
-        sendLoginBtn.disabled = true;
-        loginMessage.textContent = '正在验证...';
-        loginMessage.classList.remove('error');
-        try {
-          await collaboration.signIn(token);
-          loginMessage.textContent = `已授权为 ${collaboration.user?.login || 'GitHub 用户'}`;
-        } catch (error) {
-          loginMessage.textContent = error.message || '发送失败，请稍后重试';
-          loginMessage.classList.add('error');
-        } finally {
-          sendLoginBtn.disabled = false;
-        }
       });
 
       renderHeader();

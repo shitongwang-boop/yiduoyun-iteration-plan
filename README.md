@@ -1,19 +1,21 @@
 # 一朵云项目迭代规划
 
-GitHub Pages 静态站点，使用仓库中的 `data/iteration-plan.json` 作为唯一共享数据源。
+GitHub Pages 静态站点，使用腾讯云 CloudBase 数据库作为共享数据源。
 
 ## 启用多人协作
 
-1. 将允许编辑的成员添加为 `shitongwang-boop/yiduoyun-iteration-plan` 仓库的协作者，并授予 Write 权限。
-2. 每位编辑者在 GitHub 的 Settings > Developer settings > Personal access tokens > Fine-grained tokens 新建令牌。
-3. 令牌只选择该仓库，并授予 Repository permissions 中的 Contents: Read and write；不需要其他权限。
-4. 在网站右上角点击“GitHub 授权”，粘贴令牌后即可编辑。
+此站点采用开放编辑模式：访问页面即可查看和编辑，不需要 GitHub 账号或令牌。
 
-令牌只保存在当前浏览器会话，关闭浏览器标签页后需要再次授权。页面每 15 秒读取一次共享文件，保存时通过 GitHub Contents API 创建提交。
+环境管理员需要在 CloudBase 控制台完成一次性配置：
+
+1. 进入环境 `yiduoyun-iteration-plan-d36f964e`，在“身份认证”中启用匿名登录。
+2. 在“云开发数据库”中新建集合 `iteration_plans`，创建一条 `_id` 为 `main` 的记录，并将 `data/iteration-plan.json` 中的 `items` 数组填入记录的 `items` 字段。
+3. 为该集合设置公开读写规则。此设置意味着获得网址的任何人都可以修改规划。
+
+页面连接 CloudBase 后会自动使用匿名身份；变更会实时监听，并每 10 秒额外校验一次数据。
 
 ## 权限与并发
 
-- 未授权用户可查看共享规划，授权用户可调整顺序和日期。
-- GitHub 会记录每次修改的提交人、时间和完整文件历史。
-- 保存前会读取最新版文件；发生并发更新时，不同主题或日期的调整会自动合并并重试。
-- 需要即时通知时刷新页面即可；常规同步间隔为 15 秒。
+- 所有访问者均可调整顺序和日期。
+- 为避免覆盖其他人刚完成的修改，保存前会读取最新数据并合并不同主题或日期的调整。
+- 开放编辑没有成员身份和操作审计；需要限制编辑范围时，应改为统一编辑口令或企业微信登录。
