@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-07T11:00:11.489Z",
+  "updatedAt": "2026-08-07T11:00:16.305Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -110,8 +110,8 @@
     },
     {
       "id": "b1-settlement",
-      "start": "2026-08-07",
-      "end": "2026-08-26"
+      "start": "2026-08-08",
+      "end": "2026-08-27"
     },
     {
       "id": "system-performance",
