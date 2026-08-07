@@ -85,6 +85,7 @@
     }
 
     *, *::before, *::after { box-sizing: border-box; }
+    [hidden] { display: none !important; }
 
     html, body {
       margin: 0;
@@ -155,7 +156,15 @@
 
     .toolbar { gap: 8px; flex: 0 0 auto; }
     .save-state { gap: 5px; color: var(--text-3); margin-right: 4px; white-space: nowrap; }
+    .save-state-icon { width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; }
     .save-state svg { width: 14px; height: 14px; color: var(--success); }
+    .save-state[data-state="connecting"] svg,
+    .save-state[data-state="saving"] svg { color: var(--info); }
+    .save-state[data-state="readonly"] svg,
+    .save-state[data-state="local"] svg,
+    .save-state[data-state="offline"] svg { color: var(--warn-text); }
+    .save-state[data-state="error"] { color: var(--danger); }
+    .save-state[data-state="error"] svg { color: var(--danger); }
 
     .btn, .icon-btn {
       height: 28px;
@@ -190,6 +199,7 @@
     }
 
     .scope-banner {
+      flex: 0 0 auto;
       min-height: 46px;
       margin-bottom: 8px;
       padding: 8px 12px;
@@ -223,6 +233,7 @@
     }
 
     .planner-head {
+      flex: 0 0 auto;
       min-height: 44px;
       padding: 8px 12px;
       border-bottom: 1px solid var(--border);
@@ -492,6 +503,7 @@
     }
 
     .selection-bar {
+      flex: 0 0 auto;
       min-height: 44px;
       padding: 7px 12px;
       border-top: 1px solid var(--border-strong);
@@ -544,6 +556,40 @@
     .toast.warn { border-color: var(--warn-border); border-left-color: var(--warn); }
     @keyframes toast-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
+    .collaboration-dialog {
+      width: min(400px, calc(100vw - 32px));
+      padding: 0;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      background: var(--bg-surface);
+      color: var(--text-1);
+      box-shadow: var(--shadow-lg);
+    }
+    .collaboration-dialog::backdrop { background: rgba(17, 19, 26, 0.42); }
+    .login-form { padding: 20px; display: grid; gap: 16px; }
+    .dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    .dialog-title { margin: 0; font-size: 16px; line-height: 24px; }
+    .dialog-subtitle { margin: 2px 0 0; color: var(--text-3); }
+    .dialog-field { display: grid; gap: 6px; color: var(--text-2); font-weight: 700; }
+    .dialog-input {
+      width: 100%;
+      height: 36px;
+      padding: 0 10px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      background: var(--bg-surface);
+      color: var(--text-1);
+      font-weight: 400;
+    }
+    .dialog-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-bg); }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .dialog-message { min-height: 18px; margin: 0; color: var(--text-3); }
+    .dialog-message.error { color: var(--danger); }
+    .btn.primary { border-color: var(--primary); background: var(--primary); color: var(--text-inverse); }
+    .btn.primary:hover { border-color: var(--primary-hover); background: var(--primary-hover); color: var(--text-inverse); }
+    body.collaboration-readonly .drag-handle,
+    body.collaboration-readonly .resize-handle { cursor: not-allowed; }
+
     body.is-adjusting { cursor: ew-resize; user-select: none; }
 
     @media (max-width: 900px) {
@@ -564,6 +610,7 @@
       .toolbar { justify-content: flex-start; }
       .scope-stats { justify-content: flex-start; }
       .scope-stat { flex: 1 1 0; }
+      .range-meta { flex-wrap: wrap; row-gap: 2px; }
       .legend { gap: 8px; }
       .date-field { width: 100%; justify-content: space-between; }
       .date-input { flex: 1 1 auto; width: auto; }
@@ -583,7 +630,8 @@
       </div>
     </div>
     <div class="toolbar">
-      <div class="save-state" id="saveState"><i data-lucide="cloud-check"></i><span>已自动保存</span></div>
+      <div class="save-state" id="saveState" data-state="connecting" aria-live="polite"><span class="save-state-icon" id="saveStateIcon"><i data-lucide="cloud"></i></span><span>正在检查共享数据</span></div>
+      <button class="btn" id="collaborationBtn" type="button" title="协作登录" hidden><i data-lucide="user-round"></i><span class="btn-text" id="collaborationLabel">协作登录</span></button>
       <button class="icon-btn" id="undoBtn" type="button" aria-label="撤销" title="撤销" disabled><i data-lucide="undo-2"></i><span class="icon-fallback">↶</span></button>
       <button class="icon-btn" id="redoBtn" type="button" aria-label="重做" title="重做" disabled><i data-lucide="redo-2"></i><span class="icon-fallback">↷</span></button>
       <button class="btn" id="exportBtn" type="button" title="导出当前规划 JSON"><i data-lucide="download"></i><span class="icon-fallback">↓</span><span class="btn-text">导出规划</span></button>
@@ -642,7 +690,30 @@
 
   <div class="toast-wrap" id="toastWrap" aria-live="polite"></div>
 
+  <dialog class="collaboration-dialog" id="loginDialog" aria-labelledby="loginTitle">
+    <form class="login-form" id="loginForm">
+      <div class="dialog-head">
+        <div>
+          <h2 class="dialog-title" id="loginTitle">协作登录</h2>
+          <p class="dialog-subtitle">使用工作邮箱接收登录链接</p>
+        </div>
+        <button class="icon-btn" id="closeLoginBtn" type="button" aria-label="关闭" title="关闭"><i data-lucide="x"></i></button>
+      </div>
+      <label class="dialog-field" for="loginEmail">邮箱
+        <input class="dialog-input" id="loginEmail" name="email" type="email" autocomplete="email" required placeholder="name@company.com">
+      </label>
+      <p class="dialog-message" id="loginMessage" aria-live="polite"></p>
+      <div class="dialog-actions">
+        <button class="btn" id="cancelLoginBtn" type="button">取消</button>
+        <button class="btn primary" id="sendLoginBtn" type="submit"><i data-lucide="send"></i><span>发送登录链接</span></button>
+      </div>
+    </form>
+  </dialog>
+
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8/dist/umd/supabase.min.js"></script>
+  <script src="collaboration-config.js?v=20260807-1"></script>
+  <script src="collaboration.js?v=20260807"></script>
   <script>
     (() => {
       const DAY = 24 * 60 * 60 * 1000;
@@ -650,6 +721,7 @@
       const STORAGE_KEY = 'yiduoyun-iteration-plan-user-state';
       const LEGACY_STORAGE_KEYS = ['yiduoyun-iteration-plan-v2'];
       const CATEGORY_ORDER_MIGRATION_KEY = 'yiduoyun-iteration-plan-category-order-v3';
+      const BASELINE_IMPORT_MIGRATION_KEY = 'yiduoyun-iteration-plan-import-20260807-v1';
       const CATEGORY_ORDER = ['committed', 'funds', 'reports', 'order-flow', 'fulfillment', 'contract-service', 'settlement-invoice', 'plan', 'gate', 'master-data'];
       const RANGE_START = '2026-08-07';
       const RANGE_END = '2026-09-30';
@@ -657,67 +729,86 @@
 
       // Existing IDs are the persistence contract. Never rename them in feature-only changes.
       const BASELINE_ITEMS = [
-        { id: 'order-tags', code: 'I0', title: '订单标签', topics: '在研计划点收口 · 已有计划点归并', start: '2026-08-07', end: '2026-08-13', type: 'reports', developmentCount: 2 },
-        { id: 'customer-pickup', code: 'I0-I1', title: '客户提货流程优化', topics: '在研计划点收口 / 合同与提货闭环 · 已有计划点归并', start: '2026-08-07', end: '2026-08-20', type: 'fulfillment', developmentCount: 4 },
-        { id: 'invoice-flow', code: 'I0-I2', title: '开票流程优化', topics: '在研 / 售后与结算闭环 · 已有计划点归并', start: '2026-08-07', end: '2026-08-27', type: 'settlement-invoice', developmentCount: 4 },
-        { id: 'ownership', code: 'I0', title: '货权管理优化', topics: '在研计划点收口 · 已有计划点归并', start: '2026-08-07', end: '2026-08-13', type: 'fulfillment', developmentCount: 2 },
-        { id: 'contract-management', code: 'I1', title: '合同管理线上化', topics: '合同与提货闭环 · 已有计划点归并', start: '2026-08-14', end: '2026-08-20', type: 'contract-service', developmentCount: 1 },
-        { id: 'contract-template', code: 'I1', title: '合同模板优化', topics: '合同与提货闭环 · 建议排期', start: '2026-08-14', end: '2026-08-20', type: 'contract-service' },
-        { id: 'fee-order', code: 'I1', title: '费用订单流程优化', topics: '合同与提货闭环 · 已有计划点归并', start: '2026-08-14', end: '2026-08-20', type: 'committed' },
-        { id: 'after-sales', code: 'I2', title: '售后线上流程优化', topics: '售后与结算闭环 · 已有计划点归并', start: '2026-08-21', end: '2026-08-28', type: 'contract-service', developmentCount: 14 },
-        { id: 'b2-settlement', code: 'I2', title: 'B2结算流程优化', topics: '售后与结算闭环 · 已有计划点归并', start: '2026-08-21', end: '2026-08-27', type: 'settlement-invoice', developmentCount: 2 },
-        { id: 'customer-order', code: 'I3', title: '客户下单流程优化', topics: '订单治理与稳定性 · 建议排期', start: '2026-08-29', end: '2026-09-11', type: 'order-flow' },
-        { id: 'order-editing', code: 'I3', title: '订单编辑功能整体优化', topics: '订单治理与稳定性 · 建议排期', start: '2026-08-29', end: '2026-09-11', type: 'order-flow' },
-        { id: 'order-check', code: 'I3', title: '订单检查', topics: '订单治理与稳定性 · 建议排期', start: '2026-08-29', end: '2026-09-11', type: 'plan', developmentCount: 5 },
-        { id: 'sales-order-log', code: 'I3', title: '销售订单操作日志', topics: '订单治理与稳定性 · 建议排期', start: '2026-08-29', end: '2026-09-11', type: 'plan' },
-        { id: 'system-performance', code: 'I3', title: '系统性能优化', topics: '订单治理与稳定性 · 已有计划点归并', start: '2026-08-29', end: '2026-09-11', type: 'plan', developmentCount: 1 },
-        { id: 'sourcing-order', code: 'I3', title: '找货下单', topics: '订单治理与稳定性 · 建议排期', start: '2026-08-29', end: '2026-09-11', type: 'order-flow' },
-        { id: 'sales-order-list', code: 'I3', title: '销售订单列表优化', topics: '订单治理与稳定性 · 建议排期', start: '2026-08-29', end: '2026-09-11', type: 'plan' },
-        { id: 'purchase-order-query', code: 'I3', title: '采购订单列表查询', topics: '订单治理与稳定性 · 建议排期', start: '2026-08-29', end: '2026-09-11', type: 'plan' },
-        { id: 'purchase-order-detail', code: 'I3', title: '采购订单详情优化', topics: '订单治理与稳定性 · 建议排期', start: '2026-08-29', end: '2026-09-11', type: 'plan' },
-        { id: 'purchase-order-list', code: 'I3', title: '采购订单列表优化', topics: '订单治理与稳定性 · 建议排期', start: '2026-08-29', end: '2026-09-11', type: 'plan' },
-        { id: 'project-order', code: 'I3', title: '项目订单流程线上化', topics: '订单治理与稳定性 · 建议排期', start: '2026-08-29', end: '2026-09-11', type: 'order-flow' },
-        { id: 'payment-flow', code: 'I4', title: '收付款线上流程优化', topics: '资金与外围链路 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'funds', developmentCount: 1 },
-        { id: 'auto-payment', code: 'I4', title: '自动支款流程优化', topics: '资金与外围链路 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'funds' },
-        { id: 'credit-sales', code: 'I4', title: '赊销流程优化', topics: '资金与外围链路 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'funds' },
-        { id: 'integrated-logistics', code: 'I4', title: '一体化物流流程优化', topics: '资金与外围链路 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'fulfillment' },
-        { id: 'consignment', code: 'I4', title: '转寄售流程线上化', topics: '资金与外围链路 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'order-flow' },
-        { id: 'sensitive-procurement', code: 'I4', title: '敏采流程线上化', topics: '资金与外围链路 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'order-flow' },
-        { id: 'merchant-department', code: 'I4', title: '客商二级部门线上化', topics: '资金与外围链路 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'contract-service' },
-        { id: 'b1-settlement', code: 'I4', title: 'B1结算流程优化', topics: '资金与外围链路 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'settlement-invoice', developmentCount: 1 },
-        { id: 'integrated-processing', code: 'I4', title: '一体化加工流程优化', topics: '资金与外围链路 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'fulfillment' },
-        { id: 'overdue-pickup', code: 'I4', title: '超期未提管理', topics: '资金与外围链路 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'fulfillment' },
-        { id: 'warehouse-data', code: 'I5', title: '仓库基础数据', topics: '数据与报表收口 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'master-data', developmentCount: 1 },
-        { id: 'customer-data', code: 'I5', title: '客户基础信息', topics: '数据与报表收口 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'master-data' },
-        { id: 'product-data', code: 'I5', title: '商品基础数据', topics: '数据与报表收口 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'master-data' },
-        { id: 'employee-data', code: 'I5', title: '员工基础数据', topics: '数据与报表收口 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'master-data' },
-        { id: 'supplier-data', code: 'I5', title: '供应商基础数据', topics: '数据与报表收口 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'master-data' },
-        { id: 'hr-report', code: 'I5', title: 'HR相关数据报表', topics: '数据与报表收口 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'reports' },
-        { id: 'other-report', code: 'I5', title: '其他数据报表', topics: '数据与报表收口 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'reports' },
-        { id: 'middle-office-report', code: 'I5', title: '中台相关数据报表', topics: '数据与报表收口 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'reports' },
-        { id: 'logistics-report', code: 'I5', title: '物流相关数据报表', topics: '数据与报表收口 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'reports' },
-        { id: 'finance-report', code: 'I5', title: '财务相关数据报表', topics: '数据与报表收口 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'reports', developmentCount: 1 },
-        { id: 'supply-report', code: 'I5', title: '供管相关数据报表', topics: '数据与报表收口 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'reports' },
-        { id: 'spot-report', code: 'I5', title: '现货相关数据报表', topics: '数据与报表收口 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'reports' },
-        { id: 'risk-report', code: 'I5', title: '风控相关数据报表', topics: '数据与报表收口 · 建议排期', start: '2026-09-12', end: '2026-09-20', type: 'reports' }
+        {"id":"fee-order","code":"I1","title":"费用订单流程优化","topics":"合同与提货闭环 · 已有计划点归并","start":"2026-08-10","end":"2026-08-20","type":"committed"},
+        {"id":"payment-flow","code":"I2","title":"收付款线上流程优化","topics":"资金与外围链路 · 建议排期","start":"2026-08-21","end":"2026-09-17","type":"funds","developmentCount":1},
+        {"id":"auto-payment","code":"I3","title":"自动支款流程优化","topics":"资金与外围链路 · 建议排期","start":"2026-08-10","end":"2026-09-30","type":"funds"},
+        {"id":"credit-sales","code":"I4","title":"赊销流程优化","topics":"资金与外围链路 · 建议排期","start":"2026-09-18","end":"2026-09-25","type":"funds"},
+        {"id":"order-tags","code":"I5","title":"订单标签","topics":"在研计划点收口 · 已有计划点归并","start":"2026-08-10","end":"2026-08-21","type":"reports","developmentCount":2},
+        {"id":"hr-report","code":"I6","title":"HR相关数据报表","topics":"数据与报表收口 · 建议排期","start":"2026-08-17","end":"2026-09-08","type":"reports"},
+        {"id":"other-report","code":"I7","title":"其他数据报表","topics":"数据与报表收口 · 建议排期","start":"2026-09-12","end":"2026-09-20","type":"reports"},
+        {"id":"middle-office-report","code":"I8","title":"中台相关数据报表","topics":"数据与报表收口 · 建议排期","start":"2026-09-12","end":"2026-09-20","type":"reports"},
+        {"id":"logistics-report","code":"I9","title":"物流相关数据报表","topics":"数据与报表收口 · 建议排期","start":"2026-09-12","end":"2026-09-20","type":"reports"},
+        {"id":"finance-report","code":"I10","title":"财务相关数据报表","topics":"数据与报表收口 · 建议排期","start":"2026-09-12","end":"2026-09-20","type":"reports","developmentCount":1},
+        {"id":"supply-report","code":"I11","title":"供管相关数据报表","topics":"数据与报表收口 · 建议排期","start":"2026-09-12","end":"2026-09-20","type":"reports"},
+        {"id":"spot-report","code":"I12","title":"现货相关数据报表","topics":"数据与报表收口 · 建议排期","start":"2026-09-12","end":"2026-09-20","type":"reports"},
+        {"id":"risk-report","code":"I13","title":"风控相关数据报表","topics":"数据与报表收口 · 建议排期","start":"2026-09-12","end":"2026-09-20","type":"reports"},
+        {"id":"customer-order","code":"I14","title":"客户下单流程优化","topics":"订单治理与稳定性 · 建议排期","start":"2026-08-31","end":"2026-09-10","type":"order-flow"},
+        {"id":"sourcing-order","code":"I15","title":"找货下单","topics":"订单治理与稳定性 · 建议排期","start":"2026-08-31","end":"2026-09-10","type":"order-flow"},
+        {"id":"order-editing","code":"I16","title":"订单编辑功能整体优化","topics":"订单治理与稳定性 · 建议排期","start":"2026-08-10","end":"2026-08-28","type":"order-flow"},
+        {"id":"project-order","code":"I17","title":"项目订单流程线上化","topics":"订单治理与稳定性 · 建议排期","start":"2026-09-26","end":"2026-09-30","type":"order-flow"},
+        {"id":"consignment","code":"I18","title":"转寄售流程线上化","topics":"资金与外围链路 · 建议排期","start":"2026-08-17","end":"2026-09-10","type":"order-flow"},
+        {"id":"sensitive-procurement","code":"I19","title":"敏采流程线上化","topics":"资金与外围链路 · 建议排期","start":"2026-08-24","end":"2026-09-10","type":"order-flow"},
+        {"id":"customer-pickup","code":"I20","title":"客户提货流程优化","topics":"在研计划点收口 / 合同与提货闭环 · 已有计划点归并","start":"2026-08-07","end":"2026-08-20","type":"fulfillment","developmentCount":4},
+        {"id":"ownership","code":"I21","title":"货权管理优化","topics":"在研计划点收口 · 已有计划点归并","start":"2026-09-26","end":"2026-09-30","type":"fulfillment","developmentCount":2},
+        {"id":"integrated-logistics","code":"I22","title":"一体化物流流程优化","topics":"资金与外围链路 · 建议排期","start":"2026-09-10","end":"2026-09-18","type":"fulfillment"},
+        {"id":"integrated-processing","code":"I23","title":"一体化加工流程优化","topics":"资金与外围链路 · 建议排期","start":"2026-09-12","end":"2026-09-20","type":"fulfillment"},
+        {"id":"overdue-pickup","code":"I24","title":"超期未提管理","topics":"资金与外围链路 · 建议排期","start":"2026-08-15","end":"2026-08-23","type":"fulfillment"},
+        {"id":"contract-management","code":"I25","title":"合同管理线上化","topics":"合同与提货闭环 · 已有计划点归并","start":"2026-08-30","end":"2026-09-11","type":"contract-service","developmentCount":1},
+        {"id":"contract-template","code":"I26","title":"合同模板优化","topics":"合同与提货闭环 · 建议排期","start":"2026-08-30","end":"2026-09-11","type":"contract-service"},
+        {"id":"after-sales","code":"I27","title":"售后线上流程优化","topics":"售后与结算闭环 · 已有计划点归并","start":"2026-08-07","end":"2026-08-28","type":"contract-service","developmentCount":14},
+        {"id":"merchant-department","code":"I28","title":"客商二级部门线上化","topics":"资金与外围链路 · 建议排期","start":"2026-08-13","end":"2026-08-28","type":"contract-service"},
+        {"id":"invoice-flow","code":"I29","title":"开票流程优化","topics":"在研 / 售后与结算闭环 · 已有计划点归并","start":"2026-08-17","end":"2026-09-11","type":"settlement-invoice","developmentCount":4},
+        {"id":"b2-settlement","code":"I30","title":"B2结算流程优化","topics":"售后与结算闭环 · 已有计划点归并","start":"2026-08-18","end":"2026-08-27","type":"settlement-invoice","developmentCount":2},
+        {"id":"b1-settlement","code":"I31","title":"B1结算流程优化","topics":"资金与外围链路 · 建议排期","start":"2026-08-07","end":"2026-08-26","type":"settlement-invoice","developmentCount":1},
+        {"id":"system-performance","code":"I32","title":"系统性能优化","topics":"订单治理与稳定性 · 已有计划点归并","start":"2026-09-26","end":"2026-09-30","type":"plan","developmentCount":1},
+        {"id":"order-check","code":"I33","title":"订单检查","topics":"订单治理与稳定性 · 建议排期","start":"2026-09-26","end":"2026-09-30","type":"plan","developmentCount":5},
+        {"id":"sales-order-log","code":"I34","title":"销售订单操作日志","topics":"订单治理与稳定性 · 建议排期","start":"2026-09-26","end":"2026-09-30","type":"plan"},
+        {"id":"sales-order-list","code":"I35","title":"销售订单列表优化","topics":"订单治理与稳定性 · 建议排期","start":"2026-09-26","end":"2026-09-30","type":"plan"},
+        {"id":"purchase-order-query","code":"I36","title":"采购订单列表查询","topics":"订单治理与稳定性 · 建议排期","start":"2026-09-26","end":"2026-09-30","type":"plan"},
+        {"id":"purchase-order-detail","code":"I37","title":"采购订单详情优化","topics":"订单治理与稳定性 · 建议排期","start":"2026-09-26","end":"2026-09-30","type":"plan"},
+        {"id":"purchase-order-list","code":"I38","title":"采购订单列表优化","topics":"订单治理与稳定性 · 建议排期","start":"2026-09-26","end":"2026-09-30","type":"plan"},
+        {"id":"warehouse-data","code":"I39","title":"仓库基础数据","topics":"数据与报表收口 · 建议排期","start":"2026-09-26","end":"2026-09-30","type":"master-data","developmentCount":1},
+        {"id":"customer-data","code":"I40","title":"客户基础信息","topics":"数据与报表收口 · 建议排期","start":"2026-09-26","end":"2026-09-30","type":"master-data"},
+        {"id":"product-data","code":"I41","title":"商品基础数据","topics":"数据与报表收口 · 建议排期","start":"2026-09-26","end":"2026-09-30","type":"master-data"},
+        {"id":"employee-data","code":"I42","title":"员工基础数据","topics":"数据与报表收口 · 建议排期","start":"2026-09-26","end":"2026-09-30","type":"master-data"},
+        {"id":"supplier-data","code":"I43","title":"供应商基础数据","topics":"数据与报表收口 · 建议排期","start":"2026-09-26","end":"2026-09-30","type":"master-data"}
       ];
 
       const rangeStartDate = parseDate(RANGE_START);
       const rangeEndDate = parseDate(RANGE_END);
       const totalDays = diffDays(rangeStartDate, rangeEndDate) + 1;
-      let items = applyCategoryOrderMigration(loadItems());
+      let items = applyBaselineImportMigration(applyCategoryOrderMigration(loadItems()));
       let selectedId = items[0].id;
       let draggedId = null;
       let dropCommitted = false;
       let activeAdjustment = null;
       let history = [snapshot()];
       let historyIndex = 0;
+      let presenceCount = 0;
+      let latestSyncStatus = { state: 'connecting', message: '正在检查共享数据' };
 
       const ganttRows = document.getElementById('ganttRows');
       const selectedStart = document.getElementById('selectedStart');
       const selectedEnd = document.getElementById('selectedEnd');
       const undoBtn = document.getElementById('undoBtn');
       const redoBtn = document.getElementById('redoBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const collaborationBtn = document.getElementById('collaborationBtn');
+      const collaborationLabel = document.getElementById('collaborationLabel');
+      const loginDialog = document.getElementById('loginDialog');
+      const loginForm = document.getElementById('loginForm');
+      const loginMessage = document.getElementById('loginMessage');
+      const sendLoginBtn = document.getElementById('sendLoginBtn');
+      const collaboration = new window.IterationPlanCollaboration(window.YIDUOYUN_SYNC_CONFIG, {
+        onRemoteChange: applyRemoteItems,
+        onStatus: updateSyncStatus,
+        onAuthChange: updateAuthState,
+        onPresenceChange: (count) => {
+          presenceCount = count;
+          renderSyncStatus();
+        }
+      });
+      let editingEnabled = !collaboration.configured;
 
       function parseDate(value) {
         const [year, month, day] = String(value).split('-').map(Number);
@@ -767,6 +858,19 @@
         } catch (error) {
           console.warn('无法记录分类排序迁移，将仅在当前页面应用。', error);
           return groupByCategory(source);
+        }
+      }
+
+      function applyBaselineImportMigration(source) {
+        try {
+          if (localStorage.getItem(BASELINE_IMPORT_MIGRATION_KEY) === 'done') return source;
+          const imported = cloneBaseline();
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(imported.map(({ id, start, end }) => ({ id, start, end }))));
+          localStorage.setItem(BASELINE_IMPORT_MIGRATION_KEY, 'done');
+          return imported;
+        } catch (error) {
+          console.warn('无法记录规划数据导入，将仅在当前页面应用。', error);
+          return cloneBaseline();
         }
       }
 
@@ -822,15 +926,80 @@
         return JSON.stringify(items.map(({ id, start, end }) => ({ id, start, end })));
       }
 
-      function saveItems() {
-        const saveState = document.getElementById('saveState');
+      function cacheItems() {
         try {
           localStorage.setItem(STORAGE_KEY, snapshot());
-          saveState.querySelector('span').textContent = '已自动保存';
+          return true;
         } catch (error) {
-          saveState.querySelector('span').textContent = '仅当前页面';
           console.warn('当前浏览器不支持本地保存。', error);
+          return false;
         }
+      }
+
+      function saveItems() {
+        cacheItems();
+        collaboration.save(JSON.parse(snapshot())).catch((error) => {
+          if (error.code === 'AUTH_REQUIRED') {
+            openLoginDialog();
+            return;
+          }
+          console.warn('无法提交共享规划。', error);
+        });
+      }
+
+      function applyRemoteItems(remoteItems, meta = {}) {
+        const merged = mergeStoredItems(remoteItems);
+        if (!merged) return;
+        if (activeAdjustment || draggedId) {
+          activeAdjustment = null;
+          draggedId = null;
+          document.body.classList.remove('is-adjusting');
+          showToast('已接收他人更新，本次调整已取消', 'warn');
+        }
+        items = merged;
+        if (!items.some((item) => item.id === selectedId)) selectedId = items[0].id;
+        history = [snapshot()];
+        historyIndex = 0;
+        cacheItems();
+        renderRows();
+        updateHistoryButtons();
+        if (!meta.initial) showToast(meta.merged ? '并发调整已自动合并' : '已同步他人的最新调整');
+      }
+
+      function updateSyncStatus(status) {
+        latestSyncStatus = status;
+        renderSyncStatus();
+      }
+
+      function renderSyncStatus() {
+        const saveState = document.getElementById('saveState');
+        const iconByState = {
+          connecting: 'loader-circle',
+          saving: 'loader-circle',
+          synced: 'cloud-check',
+          readonly: 'lock-keyhole',
+          local: 'hard-drive',
+          offline: 'cloud-off',
+          error: 'triangle-alert'
+        };
+        const onlineSuffix = collaboration.configured && presenceCount > 0 && ['synced', 'readonly'].includes(latestSyncStatus.state)
+          ? ` · ${presenceCount} 人在线`
+          : '';
+        saveState.dataset.state = latestSyncStatus.state;
+        document.getElementById('saveStateIcon').innerHTML = `<i data-lucide="${iconByState[latestSyncStatus.state] || 'cloud'}"></i>`;
+        saveState.querySelector(':scope > span:last-child').textContent = `${latestSyncStatus.message}${onlineSuffix}`;
+        refreshIcons();
+      }
+
+      function updateAuthState({ configured, canEdit, user }) {
+        editingEnabled = canEdit;
+        collaborationBtn.hidden = !configured;
+        collaborationLabel.textContent = user?.email || '协作登录';
+        collaborationBtn.title = user ? `${user.email || '协作账号'} · 点击退出` : '协作登录';
+        collaborationBtn.querySelector('svg')?.setAttribute('data-lucide', user ? 'circle-user-round' : 'user-round');
+        document.body.classList.toggle('collaboration-readonly', configured && !canEdit);
+        renderRows();
+        updateHistoryButtons();
       }
 
       function pushHistory() {
@@ -853,8 +1022,9 @@
       }
 
       function updateHistoryButtons() {
-        undoBtn.disabled = historyIndex <= 0;
-        redoBtn.disabled = historyIndex >= history.length - 1;
+        undoBtn.disabled = !editingEnabled || historyIndex <= 0;
+        redoBtn.disabled = !editingEnabled || historyIndex >= history.length - 1;
+        resetBtn.disabled = !editingEnabled;
       }
 
       function refreshIcons() {
@@ -935,7 +1105,7 @@
           return `
             <div class="gantt-row${isSelected ? ' selected' : ''}" data-id="${item.id}">
               <div class="iteration-cell">
-                <button class="drag-handle" type="button" draggable="true" data-drag-id="${item.id}" aria-label="调整${escapeHtml(item.title)}顺序" title="拖动调整顺序"><i data-lucide="grip-vertical"></i></button>
+                <button class="drag-handle" type="button" draggable="${editingEnabled}" data-drag-id="${item.id}" aria-label="调整${escapeHtml(item.title)}顺序" title="拖动调整顺序"${editingEnabled ? '' : ' disabled'}><i data-lucide="grip-vertical"></i></button>
                 <span class="iteration-code ${classes}">I${index + 1}</span>
                 <div class="iteration-copy">
                   <div class="iteration-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</div>
@@ -947,10 +1117,10 @@
                 <div class="release-window" style="left:${45 / totalDays * 100}%;width:${5 / totalDays * 100}%" aria-hidden="true"></div>
                 <div class="release-window launch" style="left:${50 / totalDays * 100}%;width:${5 / totalDays * 100}%" aria-hidden="true"></div>
                 <div class="goal-line" aria-hidden="true"></div>
-                <div class="task-bar ${classes}${isSelected ? ' active' : ''}" data-bar-id="${item.id}" style="left:${left}%;width:${width}%" role="group" aria-label="${escapeHtml(item.title)}，${rangeLabel}，共${durationDays(item)}天" title="${rangeLabel} · ${durationDays(item)} 天">
-                  <button class="resize-handle start" type="button" data-resize="start" aria-label="调整${escapeHtml(item.title)}开始日期" title="调整开始日期"></button>
+                <div class="task-bar ${classes}${isSelected ? ' active' : ''}" data-bar-id="${item.id}" style="left:${left}%;width:${width}%" role="group" aria-label="${escapeHtml(item.title)}，${rangeLabel}，共${durationDays(item)}天" aria-disabled="${!editingEnabled}" title="${rangeLabel} · ${durationDays(item)} 天">
+                  <button class="resize-handle start" type="button" data-resize="start" aria-label="调整${escapeHtml(item.title)}开始日期" title="调整开始日期"${editingEnabled ? '' : ' disabled'}></button>
                   <span class="bar-label">${rangeLabel}</span>
-                  <button class="resize-handle end" type="button" data-resize="end" aria-label="调整${escapeHtml(item.title)}结束日期" title="调整结束日期"></button>
+                  <button class="resize-handle end" type="button" data-resize="end" aria-label="调整${escapeHtml(item.title)}结束日期" title="调整结束日期"${editingEnabled ? '' : ' disabled'}></button>
                 </div>
               </div>
             </div>`;
@@ -977,6 +1147,8 @@
         selectedEnd.value = item.end;
         selectedStart.max = item.end;
         selectedEnd.min = item.start;
+        selectedStart.disabled = !editingEnabled;
+        selectedEnd.disabled = !editingEnabled;
         document.getElementById('selectedDuration').textContent = `${durationDays(item)} 天`;
       }
 
@@ -995,6 +1167,7 @@
       }
 
       function reorderByKeyboard(id, direction) {
+        if (!editingEnabled) return;
         const index = items.findIndex((item) => item.id === id);
         const nextIndex = index + direction;
         if (index < 0 || nextIndex < 0 || nextIndex >= items.length) return;
@@ -1008,7 +1181,7 @@
       }
 
       function beginAdjustment(event, itemId, mode) {
-        if (event.button !== 0) return;
+        if (!editingEnabled || event.button !== 0) return;
         const item = items.find((entry) => entry.id === itemId);
         const track = event.target.closest('.timeline-track');
         if (!item || !track) return;
@@ -1073,6 +1246,7 @@
       }
 
       function nudgeDate(id, edge, amount) {
+        if (!editingEnabled) return;
         const item = items.find((entry) => entry.id === id);
         if (!item) return;
         const start = parseDate(item.start);
@@ -1105,6 +1279,10 @@
       });
 
       ganttRows.addEventListener('dragstart', (event) => {
+        if (!editingEnabled) {
+          event.preventDefault();
+          return;
+        }
         const handle = event.target.closest('.drag-handle');
         if (!handle) return;
         draggedId = handle.dataset.dragId;
@@ -1171,6 +1349,7 @@
       document.addEventListener('pointercancel', finishAdjustment);
 
       function updateSelectedDate(edge, value) {
+        if (!editingEnabled) return;
         const item = items.find((entry) => entry.id === selectedId);
         if (!item) return;
         if (!value) {
@@ -1209,7 +1388,8 @@
         showToast('已重做上一步调整');
       });
 
-      document.getElementById('resetBtn').addEventListener('click', () => {
+      resetBtn.addEventListener('click', () => {
+        if (!editingEnabled) return;
         if (!window.confirm('确认恢复最初的主题顺序和时间范围？')) return;
         items = cloneBaseline();
         selectedId = items[0].id;
@@ -1248,10 +1428,64 @@
         showToast('规划文件已导出');
       });
 
+      function openLoginDialog() {
+        loginMessage.textContent = '';
+        loginMessage.classList.remove('error');
+        if (!loginDialog.open) loginDialog.showModal();
+        window.setTimeout(() => document.getElementById('loginEmail').focus(), 0);
+      }
+
+      function closeLoginDialog() {
+        if (loginDialog.open) loginDialog.close();
+      }
+
+      collaborationBtn.addEventListener('click', async () => {
+        if (!collaboration.user) {
+          openLoginDialog();
+          return;
+        }
+        if (!window.confirm(`确认退出 ${collaboration.user.email || '当前协作账号'}？`)) return;
+        try {
+          await collaboration.signOut();
+          showToast('已退出协作账号');
+        } catch (error) {
+          showToast('退出失败，请稍后重试', 'warn');
+          console.warn('协作账号退出失败。', error);
+        }
+      });
+
+      document.getElementById('closeLoginBtn').addEventListener('click', closeLoginDialog);
+      document.getElementById('cancelLoginBtn').addEventListener('click', closeLoginDialog);
+      loginDialog.addEventListener('click', (event) => {
+        if (event.target === loginDialog) closeLoginDialog();
+      });
+
+      loginForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const email = document.getElementById('loginEmail').value.trim();
+        if (!email) return;
+        sendLoginBtn.disabled = true;
+        loginMessage.textContent = '正在发送...';
+        loginMessage.classList.remove('error');
+        try {
+          await collaboration.signIn(email);
+          loginMessage.textContent = '登录链接已发送，请到邮箱中查收';
+        } catch (error) {
+          loginMessage.textContent = error.message || '发送失败，请稍后重试';
+          loginMessage.classList.add('error');
+        } finally {
+          sendLoginBtn.disabled = false;
+        }
+      });
+
       renderHeader();
       renderRows();
-      saveItems();
+      cacheItems();
       updateHistoryButtons();
+      collaboration.start(JSON.parse(snapshot())).catch((error) => {
+        updateSyncStatus({ state: 'error', message: '共享数据连接失败' });
+        console.warn('共享协作初始化失败。', error);
+      });
       window.addEventListener('load', refreshIcons);
     })();
   </script>
