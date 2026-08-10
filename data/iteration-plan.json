@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-10T10:52:42.253Z",
+  "updatedAt": "2026-08-10T10:54:46.410Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -95,7 +95,7 @@
     },
     {
       "id": "sensitive-procurement",
-      "start": "2026-08-27",
+      "start": "2026-08-28",
       "end": "2026-09-10"
     },
     {
