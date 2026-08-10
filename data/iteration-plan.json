@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-10T03:01:37.375Z",
+  "updatedAt": "2026-08-10T03:17:30.183Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -35,7 +35,7 @@
     },
     {
       "id": "order-editing",
-      "start": "2026-08-10",
+      "start": "2026-08-15",
       "end": "2026-08-28"
     },
     {
