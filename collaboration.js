@@ -70,7 +70,12 @@
       this.started = false;
       this.gatewayReady = false;
       this.pollTimer = null;
-      this.onlineHandler = () => this.flush();
+      this.retryTimer = null;
+      this.retryAttempt = 0;
+      this.onlineHandler = () => {
+        this.clearRetry();
+        this.flush();
+      };
       this.offlineHandler = () => this.status('offline', '当前离线，修改将在联网后同步');
     }
 
@@ -145,7 +150,7 @@
             this.callbacks.onRemoteChange?.(items, { initial, updatedAt: remote.updatedAt });
           }
         }
-        this.updateIdleStatus();
+        if (!this.saving && !this.pendingItems && !this.retryTimer) this.updateIdleStatus();
       } catch (error) {
         console.warn('无法读取 GitHub 共享规划。', error);
         this.status('error', '共享数据读取失败，正在重试');
@@ -158,6 +163,22 @@
       else this.status('synced', '共享数据已同步 · 所有人可直接编辑');
     }
 
+    clearRetry() {
+      if (this.retryTimer) global.clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    }
+
+    scheduleRetry() {
+      if (this.retryTimer || !this.pendingItems || !this.canEdit || !global.navigator?.onLine) return;
+      this.retryAttempt += 1;
+      const delay = Math.min(30000, 1000 * (2 ** Math.min(this.retryAttempt - 1, 5)));
+      this.status('saving', `保存遇到问题，${Math.round(delay / 1000)} 秒后自动重试`);
+      this.retryTimer = global.setTimeout(() => {
+        this.retryTimer = null;
+        this.flush();
+      }, delay);
+    }
+
     save(items) {
       if (!this.canEdit) {
         const error = new Error('开放编辑网关尚未部署');
@@ -165,6 +186,8 @@
         return Promise.reject(error);
       }
       this.pendingItems = compactItems(items);
+      this.clearRetry();
+      this.retryAttempt = 0;
       return this.flush();
     }
 
@@ -180,10 +203,11 @@
     }
 
     async flush() {
-      if (this.saving || !this.pendingItems || !this.canEdit || !global.navigator?.onLine) return;
+      if (this.saving || this.retryTimer || !this.pendingItems || !this.canEdit || !global.navigator?.onLine) return;
       this.saving = true;
       this.status('saving', '正在保存共享规划');
       let unsavedItems = null;
+      let rebaseAttempts = 0;
 
       try {
         while (this.pendingItems) {
@@ -194,19 +218,27 @@
           this.current = saved;
           unsavedItems = null;
           if (!sameItems(saved.items, localItems)) {
-            this.callbacks.onRemoteChange?.(saved.items, { initial: false, merged: true, updatedAt: saved.updatedAt });
+            // Keep the user's visible edit and retry it against the gateway's latest version.
+            if (rebaseAttempts >= 2) throw new Error('共享规划存在持续冲突，已保留本地修改并将自动重试');
+            rebaseAttempts += 1;
+            if (!this.pendingItems) this.pendingItems = localItems;
+            this.status('saving', '检测到并发更新，正在重新保存最新修改');
+            continue;
           }
+          rebaseAttempts = 0;
         }
         if (this.queuedRemote && Date.parse(this.queuedRemote.updatedAt || '') > Date.parse(this.current.updatedAt || '')) {
           this.current = this.queuedRemote;
           this.callbacks.onRemoteChange?.(this.queuedRemote.items, { initial: false, updatedAt: this.queuedRemote.updatedAt });
         }
         this.queuedRemote = null;
+        this.retryAttempt = 0;
         this.updateIdleStatus();
       } catch (error) {
         if (unsavedItems && !this.pendingItems) this.pendingItems = unsavedItems;
         console.warn('GitHub 共享规划保存失败。', error);
-        this.status(global.navigator?.onLine ? 'error' : 'offline', global.navigator?.onLine ? '保存失败，本地副本已保留' : '当前离线，修改将在联网后同步');
+        if (global.navigator?.onLine && this.canEdit) this.scheduleRetry();
+        else this.status('offline', '当前离线，修改将在联网后同步');
       } finally {
         this.saving = false;
       }
