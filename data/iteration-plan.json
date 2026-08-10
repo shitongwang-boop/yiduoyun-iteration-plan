@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-10T10:34:33.940Z",
+  "updatedAt": "2026-08-10T10:43:48.649Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -90,7 +90,7 @@
     },
     {
       "id": "consignment",
-      "start": "2026-08-17",
+      "start": "2026-08-20",
       "end": "2026-09-10"
     },
     {
