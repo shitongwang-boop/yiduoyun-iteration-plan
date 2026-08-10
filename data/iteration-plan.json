@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-10T10:51:47.136Z",
+  "updatedAt": "2026-08-10T10:51:54.529Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -70,7 +70,7 @@
     },
     {
       "id": "customer-order",
-      "start": "2026-09-04",
+      "start": "2026-09-05",
       "end": "2026-09-10"
     },
     {
