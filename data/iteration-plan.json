@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-10T09:10:51.216Z",
+  "updatedAt": "2026-08-10T09:10:56.007Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -56,12 +56,12 @@
     {
       "id": "supply-report",
       "start": "2026-08-17",
-      "end": "2026-08-25"
+      "end": "2026-09-10"
     },
     {
       "id": "spot-report",
-      "start": "2026-09-12",
-      "end": "2026-09-20"
+      "start": "2026-08-17",
+      "end": "2026-08-25"
     },
     {
       "id": "risk-report",
