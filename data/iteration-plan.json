@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-10T09:24:54.639Z",
+  "updatedAt": "2026-08-10T09:27:20.832Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -15,8 +15,8 @@
     },
     {
       "id": "auto-payment",
-      "start": "2026-08-10",
-      "end": "2026-09-30"
+      "start": "2026-08-08",
+      "end": "2026-09-28"
     },
     {
       "id": "credit-sales",
