@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-10T11:43:10.669Z",
+  "updatedAt": "2026-08-10T11:43:15.619Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -116,7 +116,7 @@
     {
       "id": "integrated-processing",
       "start": "2026-08-08",
-      "end": "2026-09-20"
+      "end": "2026-08-13"
     },
     {
       "id": "overdue-pickup",
