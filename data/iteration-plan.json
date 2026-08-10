@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-10T08:58:06.684Z",
+  "updatedAt": "2026-08-10T08:58:11.477Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -105,8 +105,8 @@
     },
     {
       "id": "ownership",
-      "start": "2026-09-14",
-      "end": "2026-09-18"
+      "start": "2026-09-24",
+      "end": "2026-09-28"
     },
     {
       "id": "integrated-logistics",
