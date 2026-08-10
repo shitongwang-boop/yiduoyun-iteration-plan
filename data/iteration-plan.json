@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-10T09:23:51.878Z",
+  "updatedAt": "2026-08-10T09:24:01.992Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -26,7 +26,7 @@
     {
       "id": "order-tags",
       "start": "2026-08-17",
-      "end": "2026-08-21"
+      "end": "2026-09-15"
     },
     {
       "id": "hr-report",
