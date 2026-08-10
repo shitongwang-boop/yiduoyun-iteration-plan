@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-10T09:22:22.830Z",
+  "updatedAt": "2026-08-10T09:22:28.703Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -21,7 +21,7 @@
     {
       "id": "credit-sales",
       "start": "2026-09-08",
-      "end": "2026-09-16"
+      "end": "2026-09-15"
     },
     {
       "id": "order-tags",
