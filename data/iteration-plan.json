@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-10T09:10:27.316Z",
+  "updatedAt": "2026-08-10T09:10:31.724Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -40,8 +40,8 @@
     },
     {
       "id": "middle-office-report",
-      "start": "2026-09-12",
-      "end": "2026-09-20"
+      "start": "2026-08-17",
+      "end": "2026-08-25"
     },
     {
       "id": "logistics-report",
