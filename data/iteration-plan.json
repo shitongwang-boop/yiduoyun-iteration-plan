@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-10T09:10:36.178Z",
+  "updatedAt": "2026-08-10T09:10:39.210Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -46,7 +46,7 @@
     {
       "id": "logistics-report",
       "start": "2026-08-17",
-      "end": "2026-08-25"
+      "end": "2026-09-10"
     },
     {
       "id": "finance-report",
