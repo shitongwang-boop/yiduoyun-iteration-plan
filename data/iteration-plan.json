@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-10T08:17:42.004Z",
+  "updatedAt": "2026-08-10T08:43:19.248Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -56,7 +56,7 @@
     {
       "id": "customer-pickup",
       "start": "2026-08-07",
-      "end": "2026-08-20"
+      "end": "2026-08-21"
     },
     {
       "id": "ownership",
