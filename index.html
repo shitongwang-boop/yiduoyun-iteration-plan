@@ -163,8 +163,8 @@
     .save-state[data-state="readonly"] svg,
     .save-state[data-state="local"] svg,
     .save-state[data-state="offline"] svg { color: var(--warn-text); }
-    .save-state[data-state="error"] { color: var(--danger); }
-    .save-state[data-state="error"] svg { color: var(--danger); }
+    .save-state[data-state="error"], .save-state[data-state="conflict"] { color: var(--danger); }
+    .save-state[data-state="error"] svg, .save-state[data-state="conflict"] svg { color: var(--danger); }
 
     .btn, .icon-btn {
       height: 28px;
@@ -770,6 +770,7 @@
       const redoBtn = document.getElementById('redoBtn');
       const collaboration = new window.IterationPlanCollaboration(window.YIDUOYUN_GITHUB_SYNC_CONFIG, {
         onRemoteChange: applyRemoteItems,
+        onConflict: resolveSyncConflict,
         onStatus: updateSyncStatus,
         onAuthChange: updateAuthState
       });
@@ -927,6 +928,15 @@
         if (!meta.initial) showToast(meta.merged ? '并发调整已自动合并' : '已同步他人的最新调整');
       }
 
+      function resolveSyncConflict({ conflicts }) {
+        const byId = Object.fromEntries(BASELINE_ITEMS.map((item) => [item.id, item.title]));
+        const fields = { start: '开始时间', end: '结束时间', range: '时间范围', order: '主题顺序' };
+        const details = conflicts.map((conflict) => `${byId[conflict.id] || '主题'}的${fields[conflict.field] || '内容'}`).join('、');
+        const keepLocal = window.confirm(`检测到他人刚更新了相同内容：${details}。\n\n确定保留你的修改并覆盖对方的相同字段？\n取消将采用对方的最新数据。`);
+        collaboration.resolveConflict(keepLocal);
+        if (!keepLocal) showToast('已采用他人的最新数据', 'warn');
+      }
+
       function updateSyncStatus(status) {
         latestSyncStatus = status;
         renderSyncStatus();
@@ -941,7 +951,8 @@
           readonly: 'lock-keyhole',
           local: 'hard-drive',
           offline: 'cloud-off',
-          error: 'triangle-alert'
+          error: 'triangle-alert',
+          conflict: 'triangle-alert'
         };
         saveState.dataset.state = latestSyncStatus.state;
         document.getElementById('saveStateIcon').innerHTML = `<i data-lucide="${iconByState[latestSyncStatus.state] || 'cloud'}"></i>`;

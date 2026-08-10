@@ -41,6 +41,44 @@ function mergeConcurrentItems(baseItems, localItems, remoteItems) {
   return merged;
 }
 
+function findConcurrentConflicts(baseItems, localItems, remoteItems) {
+  const baseById = Object.fromEntries(compactItems(baseItems).map((item) => [item.id, item]));
+  const local = compactItems(localItems);
+  const remote = compactItems(remoteItems);
+  const remoteById = Object.fromEntries(remote.map((item) => [item.id, item]));
+  const conflicts = [];
+
+  local.forEach((item) => {
+    const previous = baseById[item.id];
+    const latest = remoteById[item.id];
+    if (!previous || !latest) return;
+    const localStartChanged = item.start !== previous.start;
+    const localEndChanged = item.end !== previous.end;
+    const remoteStartChanged = latest.start !== previous.start;
+    const remoteEndChanged = latest.end !== previous.end;
+
+    ['start', 'end'].forEach((field) => {
+      if (item[field] !== previous[field] && latest[field] !== previous[field] && item[field] !== latest[field]) {
+        conflicts.push({ id: item.id, field, local: item[field], remote: latest[field] });
+      }
+    });
+
+    if ((localStartChanged && remoteEndChanged) || (localEndChanged && remoteStartChanged)) {
+      const start = localStartChanged ? item.start : latest.start;
+      const end = localEndChanged ? item.end : latest.end;
+      if (start > end) conflicts.push({ id: item.id, field: 'range', local: `${item.start}..${item.end}`, remote: `${latest.start}..${latest.end}` });
+    }
+  });
+
+  const baseOrder = compactItems(baseItems).map((item) => item.id);
+  const localOrder = local.map((item) => item.id);
+  const remoteOrder = remote.map((item) => item.id);
+  if (JSON.stringify(localOrder) !== JSON.stringify(baseOrder) && JSON.stringify(remoteOrder) !== JSON.stringify(baseOrder) && JSON.stringify(localOrder) !== JSON.stringify(remoteOrder)) {
+    conflicts.push({ field: 'order' });
+  }
+  return conflicts;
+}
+
 function settings() {
   return {
     owner: process.env.GITHUB_OWNER || DEFAULTS.owner,
@@ -151,6 +189,16 @@ async function handleRequest(event) {
       const latest = await readLatest(config);
       const localItems = validateItems(request.items, latest.payload.items);
       const baseItems = validateItems(request.baseItems, latest.payload.items);
+      const conflicts = findConcurrentConflicts(baseItems, localItems, latest.payload.items);
+      if (conflicts.length) {
+        return response(409, {
+          code: 'CONFLICT',
+          message: '检测到同一内容已被他人更新，请选择保留自己的修改或采用最新数据',
+          conflicts,
+          items: latest.payload.items,
+          updatedAt: latest.payload.updatedAt || null
+        });
+      }
       const merged = mergeConcurrentItems(baseItems, localItems, latest.payload.items);
       const saved = await writeLatest(config, merged, latest.sha);
       if (saved) return response(200, saved);

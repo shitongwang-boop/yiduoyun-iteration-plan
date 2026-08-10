@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const { compactItems, isConfigured, mergeConcurrentItems, parsePayload } = require('../collaboration.js');
+const { compactItems, findConcurrentConflicts, isConfigured, mergeConcurrentItems, parsePayload } = require('../collaboration.js');
 
 const base = [
   { id: 'a', start: '2026-08-07', end: '2026-08-10' },
@@ -34,6 +34,20 @@ test('a cross-field date conflict keeps the latest valid local range', () => {
   const local = [{ ...base[0], end: '2026-08-08' }, base[1]];
   const remote = [{ ...base[0], start: '2026-08-09' }, base[1]];
   assert.deepEqual(mergeConcurrentItems(base, local, remote), local);
+});
+
+test('same date field changed by two people requires an explicit choice', () => {
+  const local = [{ ...base[0], start: '2026-08-08' }, base[1]];
+  const remote = [{ ...base[0], start: '2026-08-09' }, base[1]];
+  assert.deepEqual(findConcurrentConflicts(base, local, remote), [
+    { id: 'a', field: 'start', local: '2026-08-08', remote: '2026-08-09' }
+  ]);
+});
+
+test('independent date changes are merged without a conflict', () => {
+  const local = [{ ...base[0], end: '2026-08-12' }, base[1]];
+  const remote = [base[0], { ...base[1], start: '2026-08-12' }];
+  assert.deepEqual(findConcurrentConflicts(base, local, remote), []);
 });
 
 test('configuration accepts a GitHub repository data file', () => {

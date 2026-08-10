@@ -39,6 +39,44 @@
     return merged;
   }
 
+  function findConcurrentConflicts(baseItems, localItems, remoteItems) {
+    const baseById = Object.fromEntries(compactItems(baseItems).map((item) => [item.id, item]));
+    const local = compactItems(localItems);
+    const remote = compactItems(remoteItems);
+    const remoteById = Object.fromEntries(remote.map((item) => [item.id, item]));
+    const conflicts = [];
+
+    local.forEach((item) => {
+      const previous = baseById[item.id];
+      const latest = remoteById[item.id];
+      if (!previous || !latest) return;
+      const localStartChanged = item.start !== previous.start;
+      const localEndChanged = item.end !== previous.end;
+      const remoteStartChanged = latest.start !== previous.start;
+      const remoteEndChanged = latest.end !== previous.end;
+
+      ['start', 'end'].forEach((field) => {
+        if (item[field] !== previous[field] && latest[field] !== previous[field] && item[field] !== latest[field]) {
+          conflicts.push({ id: item.id, field, local: item[field], remote: latest[field] });
+        }
+      });
+
+      if ((localStartChanged && remoteEndChanged) || (localEndChanged && remoteStartChanged)) {
+        const start = localStartChanged ? item.start : latest.start;
+        const end = localEndChanged ? item.end : latest.end;
+        if (start > end) conflicts.push({ id: item.id, field: 'range', local: `${item.start}..${item.end}`, remote: `${latest.start}..${latest.end}` });
+      }
+    });
+
+    const baseOrder = compactItems(baseItems).map((item) => item.id);
+    const localOrder = local.map((item) => item.id);
+    const remoteOrder = remote.map((item) => item.id);
+    if (JSON.stringify(localOrder) !== JSON.stringify(baseOrder) && JSON.stringify(remoteOrder) !== JSON.stringify(baseOrder) && JSON.stringify(localOrder) !== JSON.stringify(remoteOrder)) {
+      conflicts.push({ field: 'order' });
+    }
+    return conflicts;
+  }
+
   function isConfigured(config) {
     return Boolean(
       config &&
@@ -66,6 +104,7 @@
       this.initialItems = [];
       this.pendingItems = null;
       this.queuedRemote = null;
+      this.conflict = null;
       this.saving = false;
       this.started = false;
       this.gatewayReady = false;
@@ -186,6 +225,7 @@
         return Promise.reject(error);
       }
       this.pendingItems = compactItems(items);
+      this.conflict = null;
       this.clearRetry();
       this.retryAttempt = 0;
       return this.flush();
@@ -198,8 +238,30 @@
         body: JSON.stringify({ baseItems: compactItems(baseItems), items: compactItems(items) })
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || `共享规划保存失败 (${response.status})`);
+      if (!response.ok) {
+        const error = new Error(payload.message || `共享规划保存失败 (${response.status})`);
+        error.code = payload.code;
+        if (Array.isArray(payload.items)) error.remote = { items: parsePayload(payload), updatedAt: payload.updatedAt || null };
+        error.conflicts = Array.isArray(payload.conflicts) ? payload.conflicts : [];
+        throw error;
+      }
       return { items: parsePayload(payload), updatedAt: payload.updatedAt || null };
+    }
+
+    resolveConflict(keepLocal) {
+      if (!this.conflict) return;
+      const { remote } = this.conflict;
+      this.conflict = null;
+      this.current = remote;
+      if (keepLocal) {
+        this.status('saving', '正在按你的选择保存修改');
+        global.setTimeout(() => this.flush(), 0);
+        return;
+      }
+      this.pendingItems = null;
+      this.queuedRemote = null;
+      this.callbacks.onRemoteChange?.(remote.items, { initial: false, updatedAt: remote.updatedAt });
+      this.updateIdleStatus();
     }
 
     async flush() {
@@ -207,7 +269,6 @@
       this.saving = true;
       this.status('saving', '正在保存共享规划');
       let unsavedItems = null;
-      let rebaseAttempts = 0;
 
       try {
         while (this.pendingItems) {
@@ -217,15 +278,10 @@
           const saved = await this.saveWithGateway(this.current?.items || this.initialItems, localItems);
           this.current = saved;
           unsavedItems = null;
-          if (!sameItems(saved.items, localItems)) {
-            // Keep the user's visible edit and retry it against the gateway's latest version.
-            if (rebaseAttempts >= 2) throw new Error('共享规划存在持续冲突，已保留本地修改并将自动重试');
-            rebaseAttempts += 1;
-            if (!this.pendingItems) this.pendingItems = localItems;
-            this.status('saving', '检测到并发更新，正在重新保存最新修改');
-            continue;
+          if (this.pendingItems) this.pendingItems = mergeConcurrentItems(localItems, this.pendingItems, saved.items);
+          if (!sameItems(saved.items, localItems) && !this.pendingItems) {
+            this.callbacks.onRemoteChange?.(saved.items, { initial: false, merged: true, updatedAt: saved.updatedAt });
           }
-          rebaseAttempts = 0;
         }
         if (this.queuedRemote && Date.parse(this.queuedRemote.updatedAt || '') > Date.parse(this.current.updatedAt || '')) {
           this.current = this.queuedRemote;
@@ -237,7 +293,12 @@
       } catch (error) {
         if (unsavedItems && !this.pendingItems) this.pendingItems = unsavedItems;
         console.warn('GitHub 共享规划保存失败。', error);
-        if (global.navigator?.onLine && this.canEdit) this.scheduleRetry();
+        if (error.code === 'CONFLICT' && error.remote) {
+          this.current = error.remote;
+          this.conflict = { remote: error.remote, conflicts: error.conflicts };
+          this.status('conflict', '检测到同一内容的并发修改，等待你的选择');
+          this.callbacks.onConflict?.({ conflicts: error.conflicts, localItems: this.pendingItems, remoteItems: error.remote.items });
+        } else if (global.navigator?.onLine && this.canEdit) this.scheduleRetry();
         else this.status('offline', '当前离线，修改将在联网后同步');
       } finally {
         this.saving = false;
@@ -248,6 +309,6 @@
   global.IterationPlanCollaboration = IterationPlanCollaboration;
   global.mergeConcurrentIterationItems = mergeConcurrentItems;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { IterationPlanCollaboration, compactItems, mergeConcurrentItems, parsePayload, isConfigured };
+    module.exports = { IterationPlanCollaboration, compactItems, findConcurrentConflicts, mergeConcurrentItems, parsePayload, isConfigured };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
