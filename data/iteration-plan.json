@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-10T03:26:13.908Z",
+  "updatedAt": "2026-08-10T03:30:57.289Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -180,8 +180,8 @@
     },
     {
       "id": "hr-report",
-      "start": "2026-09-14",
-      "end": "2026-09-18"
+      "start": "2026-08-15",
+      "end": "2026-08-19"
     },
     {
       "id": "other-report",
