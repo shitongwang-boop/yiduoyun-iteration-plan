@@ -213,7 +213,10 @@ async function handleRequest(event) {
 // CloudBase HTTP functions pass Node's request and response objects. Returning
 // the same value when no response object is supplied keeps local testing simple.
 exports.main = async (request, responseObject) => {
-  const event = responseObject
+  const isHttpResponse = responseObject
+    && typeof responseObject.setHeader === 'function'
+    && typeof responseObject.end === 'function';
+  const event = isHttpResponse
     ? {
         httpMethod: request.method,
         headers: request.headers,
@@ -222,7 +225,7 @@ exports.main = async (request, responseObject) => {
       }
     : request;
   const result = await handleRequest(event || {});
-  if (!responseObject) return result;
+  if (!isHttpResponse) return result;
   responseObject.statusCode = result.statusCode;
   Object.entries(result.headers).forEach(([name, value]) => responseObject.setHeader(name, value));
   responseObject.end(result.body);
