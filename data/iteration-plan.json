@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-10T11:25:53.888Z",
+  "updatedAt": "2026-08-10T11:25:56.174Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -71,7 +71,7 @@
     {
       "id": "customer-order",
       "start": "2026-09-05",
-      "end": "2026-09-10"
+      "end": "2026-09-17"
     },
     {
       "id": "sourcing-order",
@@ -125,8 +125,8 @@
     },
     {
       "id": "contract-management",
-      "start": "2026-09-05",
-      "end": "2026-09-15"
+      "start": "2026-08-25",
+      "end": "2026-09-11"
     },
     {
       "id": "contract-template",
