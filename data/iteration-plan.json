@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-10T08:43:19.248Z",
+  "updatedAt": "2026-08-10T08:49:08.054Z",
   "updatedBy": "public-gateway",
   "items": [
     {
       "id": "fee-order",
-      "start": "2026-08-07",
-      "end": "2026-08-24"
+      "start": "2026-08-10",
+      "end": "2026-08-20"
     },
     {
       "id": "payment-flow",
@@ -24,6 +24,51 @@
       "end": "2026-09-25"
     },
     {
+      "id": "order-tags",
+      "start": "2026-08-10",
+      "end": "2026-08-21"
+    },
+    {
+      "id": "hr-report",
+      "start": "2026-08-17",
+      "end": "2026-09-08"
+    },
+    {
+      "id": "other-report",
+      "start": "2026-09-12",
+      "end": "2026-09-20"
+    },
+    {
+      "id": "middle-office-report",
+      "start": "2026-09-12",
+      "end": "2026-09-20"
+    },
+    {
+      "id": "logistics-report",
+      "start": "2026-09-12",
+      "end": "2026-09-20"
+    },
+    {
+      "id": "finance-report",
+      "start": "2026-09-12",
+      "end": "2026-09-20"
+    },
+    {
+      "id": "supply-report",
+      "start": "2026-09-12",
+      "end": "2026-09-20"
+    },
+    {
+      "id": "spot-report",
+      "start": "2026-09-12",
+      "end": "2026-09-20"
+    },
+    {
+      "id": "risk-report",
+      "start": "2026-09-12",
+      "end": "2026-09-20"
+    },
+    {
       "id": "customer-order",
       "start": "2026-08-31",
       "end": "2026-09-10"
@@ -35,7 +80,7 @@
     },
     {
       "id": "order-editing",
-      "start": "2026-08-15",
+      "start": "2026-08-10",
       "end": "2026-08-28"
     },
     {
@@ -45,8 +90,8 @@
     },
     {
       "id": "consignment",
-      "start": "2026-08-21",
-      "end": "2026-09-11"
+      "start": "2026-08-17",
+      "end": "2026-09-10"
     },
     {
       "id": "sensitive-procurement",
@@ -56,7 +101,7 @@
     {
       "id": "customer-pickup",
       "start": "2026-08-07",
-      "end": "2026-08-21"
+      "end": "2026-08-20"
     },
     {
       "id": "ownership",
@@ -65,28 +110,28 @@
     },
     {
       "id": "integrated-logistics",
-      "start": "2026-08-31",
-      "end": "2026-09-04"
+      "start": "2026-09-10",
+      "end": "2026-09-18"
     },
     {
       "id": "integrated-processing",
-      "start": "2026-08-24",
-      "end": "2026-08-28"
+      "start": "2026-09-12",
+      "end": "2026-09-20"
     },
     {
       "id": "overdue-pickup",
-      "start": "2026-08-17",
-      "end": "2026-08-21"
+      "start": "2026-08-15",
+      "end": "2026-08-23"
     },
     {
       "id": "contract-management",
-      "start": "2026-08-31",
+      "start": "2026-08-30",
       "end": "2026-09-11"
     },
     {
       "id": "contract-template",
-      "start": "2026-09-21",
-      "end": "2026-09-25"
+      "start": "2026-08-30",
+      "end": "2026-09-11"
     },
     {
       "id": "after-sales",
@@ -100,18 +145,18 @@
     },
     {
       "id": "invoice-flow",
-      "start": "2026-08-12",
-      "end": "2026-08-27"
+      "start": "2026-08-17",
+      "end": "2026-09-11"
     },
     {
       "id": "b2-settlement",
-      "start": "2026-08-12",
+      "start": "2026-08-18",
       "end": "2026-08-27"
     },
     {
       "id": "b1-settlement",
-      "start": "2026-08-10",
-      "end": "2026-08-27"
+      "start": "2026-08-07",
+      "end": "2026-08-26"
     },
     {
       "id": "system-performance",
@@ -172,51 +217,6 @@
       "id": "supplier-data",
       "start": "2026-09-26",
       "end": "2026-09-30"
-    },
-    {
-      "id": "order-tags",
-      "start": "2026-08-10",
-      "end": "2026-08-21"
-    },
-    {
-      "id": "hr-report",
-      "start": "2026-08-15",
-      "end": "2026-08-21"
-    },
-    {
-      "id": "other-report",
-      "start": "2026-09-14",
-      "end": "2026-09-18"
-    },
-    {
-      "id": "middle-office-report",
-      "start": "2026-09-14",
-      "end": "2026-09-18"
-    },
-    {
-      "id": "logistics-report",
-      "start": "2026-09-14",
-      "end": "2026-09-18"
-    },
-    {
-      "id": "finance-report",
-      "start": "2026-09-14",
-      "end": "2026-09-18"
-    },
-    {
-      "id": "supply-report",
-      "start": "2026-09-14",
-      "end": "2026-09-18"
-    },
-    {
-      "id": "spot-report",
-      "start": "2026-09-14",
-      "end": "2026-09-18"
-    },
-    {
-      "id": "risk-report",
-      "start": "2026-09-14",
-      "end": "2026-09-18"
     }
   ]
 }
