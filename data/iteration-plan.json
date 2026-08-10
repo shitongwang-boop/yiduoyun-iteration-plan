@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-10T03:31:05.736Z",
+  "updatedAt": "2026-08-10T07:27:08.696Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -100,7 +100,7 @@
     },
     {
       "id": "invoice-flow",
-      "start": "2026-08-10",
+      "start": "2026-08-12",
       "end": "2026-08-27"
     },
     {
