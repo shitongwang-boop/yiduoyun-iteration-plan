@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-10T10:51:23.897Z",
+  "updatedAt": "2026-08-10T10:51:36.643Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -141,7 +141,7 @@
     {
       "id": "merchant-department",
       "start": "2026-08-15",
-      "end": "2026-08-28"
+      "end": "2026-09-11"
     },
     {
       "id": "invoice-flow",
