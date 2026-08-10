@@ -634,7 +634,6 @@
       <button class="icon-btn" id="undoBtn" type="button" aria-label="撤销" title="撤销" disabled><i data-lucide="undo-2"></i><span class="icon-fallback">↶</span></button>
       <button class="icon-btn" id="redoBtn" type="button" aria-label="重做" title="重做" disabled><i data-lucide="redo-2"></i><span class="icon-fallback">↷</span></button>
       <button class="btn" id="exportBtn" type="button" title="导出当前规划 JSON"><i data-lucide="download"></i><span class="icon-fallback">↓</span><span class="btn-text">导出规划</span></button>
-      <button class="icon-btn" id="resetBtn" type="button" aria-label="恢复基线" title="恢复基线"><i data-lucide="rotate-ccw"></i><span class="icon-fallback">↺</span></button>
     </div>
   </header>
 
@@ -769,7 +768,6 @@
       const selectedEnd = document.getElementById('selectedEnd');
       const undoBtn = document.getElementById('undoBtn');
       const redoBtn = document.getElementById('redoBtn');
-      const resetBtn = document.getElementById('resetBtn');
       const collaboration = new window.IterationPlanCollaboration(window.YIDUOYUN_GITHUB_SYNC_CONFIG, {
         onRemoteChange: applyRemoteItems,
         onStatus: updateSyncStatus,
@@ -980,7 +978,6 @@
       function updateHistoryButtons() {
         undoBtn.disabled = !editingEnabled || historyIndex <= 0;
         redoBtn.disabled = !editingEnabled || historyIndex >= history.length - 1;
-        resetBtn.disabled = !editingEnabled;
       }
 
       function refreshIcons() {
@@ -1342,16 +1339,6 @@
         applySnapshot(history[historyIndex]);
         updateHistoryButtons();
         showToast('已重做上一步调整');
-      });
-
-      resetBtn.addEventListener('click', () => {
-        if (!editingEnabled) return;
-        if (!window.confirm('确认恢复最初的主题顺序和时间范围？')) return;
-        items = cloneBaseline();
-        selectedId = items[0].id;
-        pushHistory();
-        renderRows();
-        showToast('已恢复规划基线');
       });
 
       document.getElementById('exportBtn').addEventListener('click', () => {
