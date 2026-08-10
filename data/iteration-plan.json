@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-10T11:26:32.915Z",
+  "updatedAt": "2026-08-10T11:26:38.971Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -130,8 +130,8 @@
     },
     {
       "id": "contract-template",
-      "start": "2026-08-20",
-      "end": "2026-09-01"
+      "start": "2026-08-30",
+      "end": "2026-09-11"
     },
     {
       "id": "after-sales",
