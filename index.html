@@ -384,6 +384,17 @@
     .iteration-title { color: var(--text-1); font-size: 14px; line-height: 20px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .iteration-topics { color: var(--text-3); line-height: 18px; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
     .iteration-topics-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .update-meta {
+      width: 18px;
+      height: 18px;
+      display: inline-grid;
+      place-items: center;
+      flex: 0 0 auto;
+      color: var(--text-4);
+      cursor: help;
+    }
+    .update-meta:hover { color: var(--primary); }
+    .update-meta svg { width: 14px; height: 14px; }
     .development-badge {
       height: 18px;
       padding: 0 4px;
@@ -688,14 +699,31 @@
 
   <div class="toast-wrap" id="toastWrap" aria-live="polite"></div>
 
+  <dialog class="collaboration-dialog" id="aliasDialog" aria-labelledby="aliasDialogTitle">
+    <form class="login-form" id="aliasForm" novalidate>
+      <div class="dialog-head">
+        <div>
+          <h2 class="dialog-title" id="aliasDialogTitle">填写花名</h2>
+          <p class="dialog-subtitle">用于标记你更新的迭代主题</p>
+        </div>
+      </div>
+      <label class="dialog-field" for="aliasInput">花名
+        <input class="dialog-input" id="aliasInput" name="alias" type="text" maxlength="32" autocomplete="nickname" required>
+      </label>
+      <p class="dialog-message" id="aliasMessage" aria-live="polite"></p>
+      <div class="dialog-actions"><button class="btn primary" type="submit">开始编辑</button></div>
+    </form>
+  </dialog>
+
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
   <script src="collaboration-config.js?v=20260807-github-gateway"></script>
-  <script src="collaboration.js?v=20260807-github-gateway"></script>
+  <script src="collaboration.js?v=20260811-row-updates"></script>
   <script>
     (() => {
       const DAY = 24 * 60 * 60 * 1000;
       // Keep this key versionless: feature releases must not replace user-edited order or dates.
       const STORAGE_KEY = 'yiduoyun-iteration-plan-user-state';
+      const ALIAS_STORAGE_KEY = 'yiduoyun-iteration-plan-alias';
       const LEGACY_STORAGE_KEYS = ['yiduoyun-iteration-plan-v2'];
       const CATEGORY_ORDER_MIGRATION_KEY = 'yiduoyun-iteration-plan-category-order-v3';
       const BASELINE_IMPORT_MIGRATION_KEY = 'yiduoyun-iteration-plan-import-20260807-v1';
@@ -762,12 +790,18 @@
       let history = [snapshot()];
       let historyIndex = 0;
       let latestSyncStatus = { state: 'connecting', message: '正在检查共享数据' };
+      let currentAlias = readAlias();
+      let pendingUpdatedIds = new Set();
 
       const ganttRows = document.getElementById('ganttRows');
       const selectedStart = document.getElementById('selectedStart');
       const selectedEnd = document.getElementById('selectedEnd');
       const undoBtn = document.getElementById('undoBtn');
       const redoBtn = document.getElementById('redoBtn');
+      const aliasDialog = document.getElementById('aliasDialog');
+      const aliasForm = document.getElementById('aliasForm');
+      const aliasInput = document.getElementById('aliasInput');
+      const aliasMessage = document.getElementById('aliasMessage');
       const collaboration = new window.IterationPlanCollaboration(window.YIDUOYUN_GITHUB_SYNC_CONFIG, {
         onRemoteChange: applyRemoteItems,
         onConflict: resolveSyncConflict,
@@ -788,6 +822,36 @@
       function shortDate(value) {
         const date = parseDate(value);
         return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
+      }
+
+      function readAlias() {
+        try {
+          return String(localStorage.getItem(ALIAS_STORAGE_KEY) || '').trim().slice(0, 32);
+        } catch (error) {
+          return '';
+        }
+      }
+
+      function formatUpdatedAt(value) {
+        if (!value || Number.isNaN(Date.parse(value))) return '暂无记录';
+        return new Intl.DateTimeFormat('zh-CN', {
+          timeZone: 'Asia/Shanghai',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        }).format(new Date(value)).replaceAll('/', '-');
+      }
+
+      function updateInfo(item) {
+        if (!item.updatedBy || !item.updatedAt) return '暂无更新记录';
+        return `最新更新人：${item.updatedBy}\n最新更新时间：${formatUpdatedAt(item.updatedAt)}`;
+      }
+
+      function noteItemUpdate(id) {
+        if (typeof id === 'string') pendingUpdatedIds.add(id);
       }
 
       function addDays(date, amount) {
@@ -864,7 +928,13 @@
         savedItems.forEach((savedItem) => {
           const baseline = baselineById[savedItem?.id];
           if (!baseline || usedIds.has(savedItem.id) || !hasValidRange(savedItem)) return;
-          merged.push({ ...baseline, start: savedItem.start, end: savedItem.end });
+          merged.push({
+            ...baseline,
+            start: savedItem.start,
+            end: savedItem.end,
+            ...(typeof savedItem.updatedBy === 'string' ? { updatedBy: savedItem.updatedBy } : {}),
+            ...(typeof savedItem.updatedAt === 'string' ? { updatedAt: savedItem.updatedAt } : {})
+          });
           usedIds.add(savedItem.id);
         });
 
@@ -894,7 +964,7 @@
 
       function cacheItems() {
         try {
-          localStorage.setItem(STORAGE_KEY, snapshot());
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(items.map(({ id, start, end, updatedBy, updatedAt }) => ({ id, start, end, updatedBy, updatedAt }))));
           return true;
         } catch (error) {
           console.warn('当前浏览器不支持本地保存。', error);
@@ -904,7 +974,9 @@
 
       function saveItems() {
         cacheItems();
-        collaboration.save(JSON.parse(snapshot())).catch((error) => {
+        const changedIds = [...pendingUpdatedIds];
+        pendingUpdatedIds = new Set();
+        collaboration.save(items, { actor: currentAlias, changedIds }).catch((error) => {
           console.warn('无法提交共享规划。', error);
         });
       }
@@ -961,8 +1033,8 @@
       }
 
       function updateAuthState({ configured, canEdit, user }) {
-        editingEnabled = canEdit;
-        document.body.classList.toggle('collaboration-readonly', configured && !canEdit);
+        editingEnabled = canEdit && Boolean(currentAlias);
+        document.body.classList.toggle('collaboration-readonly', configured && !editingEnabled);
         renderRows();
         updateHistoryButtons();
       }
@@ -980,6 +1052,11 @@
 
       function applySnapshot(serialized) {
         const saved = JSON.parse(serialized);
+        const currentById = Object.fromEntries(items.map((item, index) => [item.id, { ...item, index }]));
+        saved.forEach((item, index) => {
+          const current = currentById[item.id];
+          if (!current || current.start !== item.start || current.end !== item.end || current.index !== index) noteItemUpdate(item.id);
+        });
         items = mergeStoredItems(saved) || cloneBaseline();
         if (!items.some((item) => item.id === selectedId)) selectedId = items[0].id;
         saveItems();
@@ -1066,6 +1143,7 @@
           const developmentBadge = item.developmentCount
             ? `<span class="development-badge" title="研发状态快照：${DEVELOPMENT_SNAPSHOT}">开发中 ${item.developmentCount} 项</span>`
             : '';
+          const latestUpdate = escapeHtml(updateInfo(item));
           return `
             <div class="gantt-row${isSelected ? ' selected' : ''}" data-id="${item.id}">
               <div class="iteration-cell">
@@ -1073,7 +1151,7 @@
                 <span class="iteration-code ${classes}">I${index + 1}</span>
                 <div class="iteration-copy">
                   <div class="iteration-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</div>
-                  <div class="iteration-topics" title="${escapeHtml(item.topics)}">${developmentBadge}<span class="iteration-topics-text">${escapeHtml(item.topics)}</span></div>
+                  <div class="iteration-topics" title="${escapeHtml(item.topics)}">${developmentBadge}<span class="iteration-topics-text">${escapeHtml(item.topics)}</span><span class="update-meta" title="${latestUpdate}" aria-label="${latestUpdate}"><i data-lucide="history"></i></span></div>
                 </div>
               </div>
               <div class="timeline-track" data-track-id="${item.id}">
@@ -1139,6 +1217,7 @@
         [nextItems[index], nextItems[nextIndex]] = [nextItems[nextIndex], nextItems[index]];
         items = nextItems;
         selectedId = id;
+        noteItemUpdate(id);
         pushHistory();
         renderRows();
         window.requestAnimationFrame(() => ganttRows.querySelector(`[data-drag-id="${id}"]`)?.focus());
@@ -1200,9 +1279,11 @@
       function finishAdjustment() {
         if (!activeAdjustment) return;
         const changed = activeAdjustment.changed;
+        const itemId = activeAdjustment.itemId;
         activeAdjustment = null;
         document.body.classList.remove('is-adjusting');
         if (changed) {
+          noteItemUpdate(itemId);
           pushHistory();
           showToast('主题时间已更新');
         }
@@ -1218,6 +1299,7 @@
         if (edge === 'start') item.start = formatDate(clampDate(addDays(start, amount), rangeStartDate, end));
         if (edge === 'end') item.end = formatDate(clampDate(addDays(end, amount), start, rangeEndDate));
         selectedId = id;
+        noteItemUpdate(id);
         pushHistory();
         renderRows();
       }
@@ -1280,6 +1362,7 @@
         const itemById = Object.fromEntries(items.map((item) => [item.id, item]));
         items = order.map((id) => itemById[id]);
         selectedId = draggedId;
+        noteItemUpdate(draggedId);
         dropCommitted = true;
         pushHistory();
         showToast('主题顺序已更新');
@@ -1328,6 +1411,7 @@
           return;
         }
         item[edge] = value;
+        noteItemUpdate(item.id);
         pushHistory();
         renderRows();
         showToast('主题时间已更新');
@@ -1365,6 +1449,8 @@
             planningBasis: item.topics,
             start: item.start,
             end: item.end,
+            latestUpdatedBy: item.updatedBy || '',
+            latestUpdatedAt: item.updatedAt || '',
             type: item.type,
             developmentStatus: item.developmentCount ? '研发中' : '',
             developmentRequirementCount: item.developmentCount || 0
@@ -1386,7 +1472,32 @@
       renderRows();
       cacheItems();
       updateHistoryButtons();
-      collaboration.start(JSON.parse(snapshot())).catch((error) => {
+      aliasDialog.addEventListener('cancel', (event) => event.preventDefault());
+      aliasForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const alias = String(aliasInput.value || '').trim().slice(0, 32);
+        if (!alias) {
+          aliasMessage.textContent = '请填写花名';
+          aliasMessage.classList.add('error');
+          aliasInput.focus();
+          return;
+        }
+        try {
+          localStorage.setItem(ALIAS_STORAGE_KEY, alias);
+          currentAlias = alias;
+          aliasDialog.close();
+          updateAuthState({ configured: collaboration.configured, canEdit: collaboration.canEdit });
+          showToast(`已使用花名「${alias}」进入编辑`);
+        } catch (error) {
+          aliasMessage.textContent = '当前浏览器无法保存花名';
+          aliasMessage.classList.add('error');
+        }
+      });
+      if (!currentAlias) {
+        aliasDialog.showModal();
+        window.setTimeout(() => aliasInput.focus(), 0);
+      }
+      collaboration.start(items).catch((error) => {
         updateSyncStatus({ state: 'error', message: '共享数据连接失败' });
         console.warn('共享协作初始化失败。', error);
       });

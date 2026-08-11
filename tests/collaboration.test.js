@@ -12,6 +12,12 @@ test('compactItems strips display-only fields', () => {
   assert.deepEqual(compactItems([{ ...base[0], title: 'A' }]), [base[0]]);
 });
 
+test('compactItems retains row update attribution', () => {
+  assert.deepEqual(compactItems([{ ...base[0], updatedBy: '小云', updatedAt: '2026-08-11T10:00:00.000Z' }]), [
+    { ...base[0], updatedBy: '小云', updatedAt: '2026-08-11T10:00:00.000Z' }
+  ]);
+});
+
 test('remote changes survive when the local client edits another field', () => {
   const local = [{ ...base[0], end: '2026-08-12' }, base[1]];
   const remote = [base[0], { ...base[1], start: '2026-08-12' }];

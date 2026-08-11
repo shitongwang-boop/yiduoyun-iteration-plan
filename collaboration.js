@@ -2,7 +2,12 @@
   'use strict';
 
   function compactItems(items) {
-    return (Array.isArray(items) ? items : []).map(({ id, start, end }) => ({ id, start, end }));
+    return (Array.isArray(items) ? items : []).map((item) => {
+      const compact = { id: item.id, start: item.start, end: item.end };
+      if (typeof item.updatedBy === 'string' && item.updatedBy.trim()) compact.updatedBy = item.updatedBy.trim().slice(0, 32);
+      if (typeof item.updatedAt === 'string' && !Number.isNaN(Date.parse(item.updatedAt))) compact.updatedAt = item.updatedAt;
+      return compact;
+    });
   }
 
   function sameItems(left, right) {
@@ -103,6 +108,7 @@
       this.current = null;
       this.initialItems = [];
       this.pendingItems = null;
+      this.pendingChange = null;
       this.queuedRemote = null;
       this.conflict = null;
       this.saving = false;
@@ -218,24 +224,33 @@
       }, delay);
     }
 
-    save(items) {
+    save(items, change = {}) {
       if (!this.canEdit) {
         const error = new Error('开放编辑网关尚未部署');
         error.code = 'GATEWAY_REQUIRED';
         return Promise.reject(error);
       }
       this.pendingItems = compactItems(items);
+      this.pendingChange = {
+        actor: typeof change.actor === 'string' ? change.actor.trim().slice(0, 32) : '',
+        changedIds: Array.isArray(change.changedIds) ? change.changedIds.filter((id) => typeof id === 'string') : []
+      };
       this.conflict = null;
       this.clearRetry();
       this.retryAttempt = 0;
       return this.flush();
     }
 
-    async saveWithGateway(baseItems, items) {
+    async saveWithGateway(baseItems, items, change) {
       const response = await global.fetch(this.config.gatewayUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ baseItems: compactItems(baseItems), items: compactItems(items) })
+        body: JSON.stringify({
+          baseItems: compactItems(baseItems),
+          items: compactItems(items),
+          actor: change?.actor || '',
+          changedIds: change?.changedIds || []
+        })
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -269,15 +284,20 @@
       this.saving = true;
       this.status('saving', '正在保存共享规划');
       let unsavedItems = null;
+      let unsavedChange = null;
 
       try {
         while (this.pendingItems) {
           const localItems = this.pendingItems;
+          const localChange = this.pendingChange;
           unsavedItems = localItems;
+          unsavedChange = localChange;
           this.pendingItems = null;
-          const saved = await this.saveWithGateway(this.current?.items || this.initialItems, localItems);
+          this.pendingChange = null;
+          const saved = await this.saveWithGateway(this.current?.items || this.initialItems, localItems, localChange);
           this.current = saved;
           unsavedItems = null;
+          unsavedChange = null;
           if (this.pendingItems) this.pendingItems = mergeConcurrentItems(localItems, this.pendingItems, saved.items);
           if (!sameItems(saved.items, localItems) && !this.pendingItems) {
             this.callbacks.onRemoteChange?.(saved.items, { initial: false, merged: true, updatedAt: saved.updatedAt });
@@ -291,7 +311,10 @@
         this.retryAttempt = 0;
         this.updateIdleStatus();
       } catch (error) {
-        if (unsavedItems && !this.pendingItems) this.pendingItems = unsavedItems;
+        if (unsavedItems && !this.pendingItems) {
+          this.pendingItems = unsavedItems;
+          this.pendingChange = unsavedChange;
+        }
         console.warn('GitHub 共享规划保存失败。', error);
         if (error.code === 'CONFLICT' && error.remote) {
           this.current = error.remote;

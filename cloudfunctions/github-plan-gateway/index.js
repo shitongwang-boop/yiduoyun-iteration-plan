@@ -8,7 +8,27 @@ const DEFAULTS = {
 };
 
 function compactItems(items) {
-  return (Array.isArray(items) ? items : []).map(({ id, start, end }) => ({ id, start, end }));
+  return (Array.isArray(items) ? items : []).map((item) => {
+    const compact = { id: item.id, start: item.start, end: item.end };
+    if (typeof item.updatedBy === 'string' && item.updatedBy.trim()) compact.updatedBy = item.updatedBy.trim().slice(0, 32);
+    if (typeof item.updatedAt === 'string' && !Number.isNaN(Date.parse(item.updatedAt))) compact.updatedAt = item.updatedAt;
+    return compact;
+  });
+}
+
+function changedItemIds(request, merged) {
+  const mergedIds = new Set(compactItems(merged).map((item) => item.id));
+  return [...new Set(Array.isArray(request.changedIds) ? request.changedIds : [])]
+    .filter((id) => typeof id === 'string' && mergedIds.has(id));
+}
+
+function stampItemUpdates(items, ids, actor) {
+  if (!actor || !ids.length) return items;
+  const updatedAt = new Date().toISOString();
+  const changed = new Set(ids);
+  return items.map((item) => changed.has(item.id)
+    ? { ...item, updatedBy: actor, updatedAt }
+    : item);
 }
 
 function mergeConcurrentItems(baseItems, localItems, remoteItems) {
@@ -184,6 +204,8 @@ async function handleRequest(event) {
     if (!Array.isArray(request.items) || !Array.isArray(request.baseItems)) {
       return response(400, { message: '请求缺少规划数据' });
     }
+    const actor = typeof request.actor === 'string' ? request.actor.trim().slice(0, 32) : '';
+    if (!actor) return response(400, { message: '请先填写更新人花名' });
 
     for (let attempt = 0; attempt < 3; attempt += 1) {
       const latest = await readLatest(config);
@@ -199,7 +221,11 @@ async function handleRequest(event) {
           updatedAt: latest.payload.updatedAt || null
         });
       }
-      const merged = mergeConcurrentItems(baseItems, localItems, latest.payload.items);
+      const merged = stampItemUpdates(
+        mergeConcurrentItems(baseItems, localItems, latest.payload.items),
+        changedItemIds(request, latest.payload.items),
+        actor
+      );
       const saved = await writeLatest(config, merged, latest.sha);
       if (saved) return response(200, saved);
     }
