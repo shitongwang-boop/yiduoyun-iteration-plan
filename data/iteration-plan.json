@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-11T03:31:49.835Z",
+  "updatedAt": "2026-08-11T03:34:34.135Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -59,8 +59,10 @@
     },
     {
       "id": "supply-report",
-      "start": "2026-08-17",
-      "end": "2026-09-10"
+      "start": "2026-08-07",
+      "end": "2026-08-31",
+      "updatedBy": "言研",
+      "updatedAt": "2026-08-11T03:34:34.135Z"
     },
     {
       "id": "spot-report",
