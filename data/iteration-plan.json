@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-11T03:34:40.528Z",
+  "updatedAt": "2026-08-11T03:34:45.479Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -66,8 +66,10 @@
     },
     {
       "id": "spot-report",
-      "start": "2026-08-17",
-      "end": "2026-09-10"
+      "start": "2026-08-07",
+      "end": "2026-08-31",
+      "updatedBy": "言研",
+      "updatedAt": "2026-08-11T03:34:45.479Z"
     },
     {
       "id": "risk-report",
