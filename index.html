@@ -384,17 +384,6 @@
     .iteration-title { color: var(--text-1); font-size: 14px; line-height: 20px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .iteration-topics { color: var(--text-3); line-height: 18px; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
     .iteration-topics-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-    .update-meta {
-      width: 18px;
-      height: 18px;
-      display: inline-grid;
-      place-items: center;
-      flex: 0 0 auto;
-      color: var(--text-4);
-      cursor: help;
-    }
-    .update-meta:hover { color: var(--primary); }
-    .update-meta svg { width: 14px; height: 14px; }
     .development-badge {
       height: 18px;
       padding: 0 4px;
@@ -717,7 +706,7 @@
 
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
   <script src="collaboration-config.js?v=20260807-github-gateway"></script>
-  <script src="collaboration.js?v=20260811-stale-revision-guard"></script>
+  <script src="collaboration.js?v=20260811-bar-update-tooltip"></script>
   <script>
     (() => {
       const DAY = 24 * 60 * 60 * 1000;
@@ -1151,7 +1140,7 @@
                 <span class="iteration-code ${classes}">I${index + 1}</span>
                 <div class="iteration-copy">
                   <div class="iteration-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</div>
-                  <div class="iteration-topics" title="${escapeHtml(item.topics)}">${developmentBadge}<span class="iteration-topics-text">${escapeHtml(item.topics)}</span><span class="update-meta" title="${latestUpdate}" aria-label="${latestUpdate}"><i data-lucide="history"></i></span></div>
+                  <div class="iteration-topics" title="${escapeHtml(item.topics)}">${developmentBadge}<span class="iteration-topics-text">${escapeHtml(item.topics)}</span></div>
                 </div>
               </div>
               <div class="timeline-track" data-track-id="${item.id}">
@@ -1159,7 +1148,7 @@
                 <div class="release-window" style="left:${45 / totalDays * 100}%;width:${5 / totalDays * 100}%" aria-hidden="true"></div>
                 <div class="release-window launch" style="left:${50 / totalDays * 100}%;width:${5 / totalDays * 100}%" aria-hidden="true"></div>
                 <div class="goal-line" aria-hidden="true"></div>
-                <div class="task-bar ${classes}${isSelected ? ' active' : ''}" data-bar-id="${item.id}" style="left:${left}%;width:${width}%" role="group" aria-label="${escapeHtml(item.title)}，${rangeLabel}，共${durationDays(item)}天" aria-disabled="${!editingEnabled}" title="${rangeLabel} · ${durationDays(item)} 天">
+                <div class="task-bar ${classes}${isSelected ? ' active' : ''}" data-bar-id="${item.id}" style="left:${left}%;width:${width}%" role="group" aria-label="${escapeHtml(item.title)}，${rangeLabel}，${latestUpdate}" aria-disabled="${!editingEnabled}" title="${latestUpdate}">
                   <button class="resize-handle start" type="button" data-resize="start" aria-label="调整${escapeHtml(item.title)}开始日期" title="调整开始日期"${editingEnabled ? '' : ' disabled'}></button>
                   <span class="bar-label">${rangeLabel}</span>
                   <button class="resize-handle end" type="button" data-resize="end" aria-label="调整${escapeHtml(item.title)}结束日期" title="调整结束日期"${editingEnabled ? '' : ' disabled'}></button>
