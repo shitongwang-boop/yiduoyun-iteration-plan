@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-11T00:58:54.151Z",
+  "updatedAt": "2026-08-11T00:59:14.695Z",
   "updatedBy": "public-gateway",
   "items": [
     {
       "id": "fee-order",
       "start": "2026-08-10",
-      "end": "2026-08-23"
+      "end": "2026-08-29"
     },
     {
       "id": "payment-flow",
