@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-11T03:20:58.052Z",
+  "updatedAt": "2026-08-11T03:21:05.940Z",
   "updatedBy": "public-gateway",
   "items": [
     {
       "id": "fee-order",
       "start": "2026-08-10",
-      "end": "2026-09-15",
-      "updatedBy": "长风",
-      "updatedAt": "2026-08-11T03:20:58.052Z"
+      "end": "2026-08-20",
+      "updatedBy": "蓝猫",
+      "updatedAt": "2026-08-11T03:21:05.940Z"
     },
     {
       "id": "payment-flow",
