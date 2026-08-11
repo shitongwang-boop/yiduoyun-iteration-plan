@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-11T03:44:14.901Z",
+  "updatedAt": "2026-08-11T03:44:17.622Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -217,8 +217,10 @@
     },
     {
       "id": "warehouse-data",
-      "start": "2026-09-26",
-      "end": "2026-09-30"
+      "start": "2026-09-21",
+      "end": "2026-09-30",
+      "updatedBy": "长风",
+      "updatedAt": "2026-08-11T03:44:17.622Z"
     },
     {
       "id": "customer-data",
