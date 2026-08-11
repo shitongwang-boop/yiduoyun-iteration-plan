@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const { compactItems, findConcurrentConflicts, isConfigured, mergeConcurrentItems, parsePayload } = require('../collaboration.js');
+const { compactItems, findConcurrentConflicts, isConfigured, isOlderRevision, mergeConcurrentItems, parsePayload } = require('../collaboration.js');
 
 const base = [
   { id: 'a', start: '2026-08-07', end: '2026-08-10' },
@@ -69,4 +69,10 @@ test('shared data accepts the GitHub file schema', () => {
   assert.deepEqual(parsePayload({ items: base }), base);
   assert.deepEqual(parsePayload({ iterationThemes: base }), base);
   assert.throws(() => parsePayload({}), /items/);
+});
+
+test('an older raw GitHub revision cannot replace a newer gateway save', () => {
+  assert.equal(isOlderRevision('2026-08-11T03:00:00.000Z', '2026-08-11T03:00:01.000Z'), true);
+  assert.equal(isOlderRevision('2026-08-11T03:00:01.000Z', '2026-08-11T03:00:00.000Z'), false);
+  assert.equal(isOlderRevision(null, '2026-08-11T03:00:00.000Z'), false);
 });

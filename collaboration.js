@@ -14,6 +14,12 @@
     return JSON.stringify(compactItems(left)) === JSON.stringify(compactItems(right));
   }
 
+  function isOlderRevision(candidate, current) {
+    const candidateTime = Date.parse(candidate || '');
+    const currentTime = Date.parse(current || '');
+    return !Number.isNaN(candidateTime) && !Number.isNaN(currentTime) && candidateTime < currentTime;
+  }
+
   function mergeConcurrentItems(baseItems, localItems, remoteItems) {
     const base = compactItems(baseItems);
     const local = compactItems(localItems);
@@ -189,6 +195,9 @@
         const items = parsePayload(payload);
         if (!this.current || !sameItems(this.current.items, items)) {
           const remote = { items, updatedAt: payload.updatedAt || null };
+          // GitHub's public raw endpoint can briefly lag behind a successful gateway write.
+          // Never let an older revision overwrite the response we just received from the gateway.
+          if (this.current && isOlderRevision(remote.updatedAt, this.current.updatedAt)) return;
           if (this.saving || this.pendingItems) this.queuedRemote = remote;
           else {
             this.current = remote;
@@ -332,6 +341,6 @@
   global.IterationPlanCollaboration = IterationPlanCollaboration;
   global.mergeConcurrentIterationItems = mergeConcurrentItems;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { IterationPlanCollaboration, compactItems, findConcurrentConflicts, mergeConcurrentItems, parsePayload, isConfigured };
+    module.exports = { IterationPlanCollaboration, compactItems, findConcurrentConflicts, isOlderRevision, mergeConcurrentItems, parsePayload, isConfigured };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
