@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-12T07:49:02.813Z",
+  "updatedAt": "2026-08-12T07:49:08.464Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -8,7 +8,7 @@
       "start": "2026-08-07",
       "end": "2026-08-18",
       "updatedBy": "长风",
-      "updatedAt": "2026-08-12T07:49:02.813Z"
+      "updatedAt": "2026-08-12T07:49:08.464Z"
     },
     {
       "id": "payment-flow",
