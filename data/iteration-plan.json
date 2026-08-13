@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-12T07:49:08.464Z",
+  "updatedAt": "2026-08-13T07:26:11.203Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -105,8 +105,10 @@
     },
     {
       "id": "sensitive-procurement",
-      "start": "2026-08-31",
-      "end": "2026-09-10"
+      "start": "2026-09-04",
+      "end": "2026-09-10",
+      "updatedBy": "胖曹",
+      "updatedAt": "2026-08-13T07:26:11.202Z"
     },
     {
       "id": "customer-pickup",
