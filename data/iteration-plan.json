@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-13T07:26:11.203Z",
+  "updatedAt": "2026-08-13T07:26:23.334Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -108,7 +108,7 @@
       "start": "2026-09-04",
       "end": "2026-09-10",
       "updatedBy": "胖曹",
-      "updatedAt": "2026-08-13T07:26:11.202Z"
+      "updatedAt": "2026-08-13T07:26:23.334Z"
     },
     {
       "id": "customer-pickup",
