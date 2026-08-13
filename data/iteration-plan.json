@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-13T07:33:11.872Z",
+  "updatedAt": "2026-08-13T07:33:27.005Z",
   "updatedBy": "public-gateway",
   "items": [
     {
@@ -87,10 +87,10 @@
     },
     {
       "id": "sourcing-order",
-      "start": "2026-08-31",
+      "start": "2026-08-26",
       "end": "2026-09-17",
       "updatedBy": "胖曹",
-      "updatedAt": "2026-08-13T07:28:05.517Z"
+      "updatedAt": "2026-08-13T07:33:27.005Z"
     },
     {
       "id": "order-editing",
